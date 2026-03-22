@@ -16,6 +16,7 @@ class Department extends Model
         'label',
         'full_name',
         'description',
+        'group_photo',
     ];
 
     public function yearbook(): BelongsTo
@@ -31,5 +32,10 @@ class Department extends Model
     public function students(): HasMany
     {
         return $this->hasMany(Student::class);
+    }
+
+    public function groupPhotos(): HasMany
+    {
+        return $this->hasMany(DepartmentGroupPhoto::class)->orderBy('sort_order')->orderBy('id');
     }
 }

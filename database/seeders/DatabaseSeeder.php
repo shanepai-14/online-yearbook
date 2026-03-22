@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Department;
+use App\Models\DepartmentGroupPhoto;
 use App\Models\Faculty;
 use App\Models\Reaction;
 use App\Models\SchoolSetting;
@@ -24,6 +25,7 @@ class DatabaseSeeder extends Seeder
     {
         Student::query()->delete();
         Faculty::query()->delete();
+        DepartmentGroupPhoto::query()->delete();
         Department::query()->delete();
         Yearbook::query()->delete();
         Reaction::query()->delete();
@@ -50,6 +52,7 @@ class DatabaseSeeder extends Seeder
             'label' => 'BSCS',
             'full_name' => 'Bachelor of Science in Computer Science',
             'description' => 'Focused on software engineering, systems, and intelligent applications.',
+            'group_photo' => 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80',
         ]);
 
         $bsba = Department::query()->create([
@@ -57,6 +60,7 @@ class DatabaseSeeder extends Seeder
             'label' => 'BSBA',
             'full_name' => 'Bachelor of Science in Business Administration',
             'description' => 'Built around strategic thinking, leadership, and entrepreneurship.',
+            'group_photo' => 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
         ]);
 
         $beed = Department::query()->create([
@@ -64,6 +68,28 @@ class DatabaseSeeder extends Seeder
             'label' => 'BEED',
             'full_name' => 'Bachelor of Elementary Education',
             'description' => 'Prepared future educators for learner-centered and inclusive classrooms.',
+            'group_photo' => 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=80',
+        ]);
+
+        DepartmentGroupPhoto::query()->create([
+            'department_id' => $cs->id,
+            'photo' => 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80',
+            'sort_order' => 1,
+        ]);
+        DepartmentGroupPhoto::query()->create([
+            'department_id' => $cs->id,
+            'photo' => 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80',
+            'sort_order' => 2,
+        ]);
+        DepartmentGroupPhoto::query()->create([
+            'department_id' => $bsba->id,
+            'photo' => 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
+            'sort_order' => 1,
+        ]);
+        DepartmentGroupPhoto::query()->create([
+            'department_id' => $bsba->id,
+            'photo' => 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80',
+            'sort_order' => 2,
         ]);
 
         $csFaculty = Faculty::query()->create([

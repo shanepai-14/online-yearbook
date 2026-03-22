@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
 use App\Models\Reaction;
 use App\Models\SchoolSetting;
 use App\Models\Yearbook;
+use App\Support\DepartmentGroupPhotoMedia;
 use App\Support\StudentPhotoMedia;
 use App\Support\VisitorFingerprint;
 use Illuminate\Http\JsonResponse;
@@ -13,6 +15,48 @@ use Illuminate\Http\Request;
 
 class YearbookController extends Controller
 {
+    public function index(): JsonResponse
+    {
+        $setting = SchoolSetting::query()->first();
+        $schoolName = $setting?->school_name ?? config('app.name', 'School');
+
+        $yearbooks = Yearbook::query()
+            ->with([
+                'departments:id,yearbook_id,label,group_photo',
+                'departments.groupPhotos:id,department_id,photo,sort_order',
+                'students:id,yearbook_id,department_id',
+            ])
+            ->orderByDesc('graduating_year')
+            ->get()
+            ->map(function (Yearbook $yearbook): array {
+                $studentsByDepartment = $yearbook->students->groupBy('department_id');
+
+                return [
+                    'year' => $yearbook->graduating_year,
+                    'academic_year_text' => $yearbook->academic_year_text,
+                    'motto' => $yearbook->hero_description,
+                    'total_graduates' => $yearbook->students->count(),
+                    'departments' => $yearbook->departments->map(function (Department $department) use ($studentsByDepartment): array {
+                        $groupPhotos = $this->departmentGroupPhotos($department);
+
+                        return [
+                            'id' => $department->id,
+                            'label' => $department->label,
+                            'count' => $studentsByDepartment->get($department->id)?->count() ?? 0,
+                            'photo' => $groupPhotos[0] ?? null,
+                            'photos' => $groupPhotos,
+                        ];
+                    })->values(),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'school_name' => $schoolName,
+            'years' => $yearbooks,
+        ]);
+    }
+
     public function show(int $year, Request $request): JsonResponse
     {
         $setting = SchoolSetting::query()->first();
@@ -23,7 +67,8 @@ class YearbookController extends Controller
         $yearbook = Yearbook::query()
             ->where('graduating_year', $year)
             ->with([
-                'departments:id,yearbook_id,label,full_name,description',
+                'departments:id,yearbook_id,label,full_name,description,group_photo',
+                'departments.groupPhotos:id,department_id,photo,sort_order',
                 'departments.faculty:id,department_id,name,role,photo',
                 'students:id,yearbook_id,department_id,name,photo,motto,badge',
             ])
@@ -95,12 +140,18 @@ class YearbookController extends Controller
                 'faculty_count' => $faculty->count(),
                 'years_count' => Yearbook::query()->count(),
             ],
-            'departments' => $yearbook->departments->map(fn ($department) => [
-                'id' => $department->id,
-                'label' => $department->label,
-                'full_name' => $department->full_name,
-                'description' => $department->description,
-            ])->values(),
+            'departments' => $yearbook->departments->map(function (Department $department): array {
+                $groupPhotos = $this->departmentGroupPhotos($department);
+
+                return [
+                    'id' => $department->id,
+                    'label' => $department->label,
+                    'full_name' => $department->full_name,
+                    'description' => $department->description,
+                    'group_photo' => $groupPhotos[0] ?? null,
+                    'group_photos' => $groupPhotos,
+                ];
+            })->values(),
             'faculty' => $faculty->map(fn (array $member) => [
                 'id' => $member['id'],
                 'name' => $member['name'],
@@ -122,5 +173,26 @@ class YearbookController extends Controller
                 'reacted_by_viewer' => isset($studentReactedLookup[$student->id]),
             ])->values(),
         ]);
+    }
+
+    private function departmentGroupPhotos(Department $department): array
+    {
+        $groupPhotos = $department->groupPhotos
+            ->pluck('photo')
+            ->map(fn ($photo) => DepartmentGroupPhotoMedia::normalizePublicUrl($photo))
+            ->filter(fn ($photo) => is_string($photo) && trim($photo) !== '')
+            ->values();
+
+        if ($groupPhotos->isNotEmpty()) {
+            return $groupPhotos->all();
+        }
+
+        $singlePhoto = DepartmentGroupPhotoMedia::normalizePublicUrl($department->group_photo);
+
+        if (is_string($singlePhoto) && trim($singlePhoto) !== '') {
+            return [$singlePhoto];
+        }
+
+        return [];
     }
 }

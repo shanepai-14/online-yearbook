@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\Yearbook;
+use App\Support\DepartmentGroupPhotoMedia;
 use App\Support\StudentPhotoMedia;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
@@ -26,7 +27,11 @@ class StudentProfileController extends Controller
             ], 404);
         }
 
-        $profile->load(['department:id,label,full_name,yearbook_id', 'yearbook:id,graduating_year']);
+        $profile->load([
+            'department:id,label,full_name,yearbook_id,group_photo',
+            'department.groupPhotos:id,department_id,photo,sort_order',
+            'yearbook:id,graduating_year',
+        ]);
 
         return response()->json([
             'profile' => $this->profilePayload($profile),
@@ -36,15 +41,21 @@ class StudentProfileController extends Controller
                     ->pluck('graduating_year')
                     ->values(),
                 'departments' => Department::query()
-                    ->with('yearbook:id,graduating_year')
+                    ->with(['yearbook:id,graduating_year', 'groupPhotos:id,department_id,photo,sort_order'])
                     ->orderBy('label')
                     ->get()
-                    ->map(fn ($department) => [
-                        'id' => $department->id,
-                        'label' => $department->label,
-                        'full_name' => $department->full_name,
-                        'graduating_year' => $department->yearbook?->graduating_year,
-                    ])
+                    ->map(function (Department $department): array {
+                        $groupPhotos = $this->departmentGroupPhotos($department);
+
+                        return [
+                            'id' => $department->id,
+                            'label' => $department->label,
+                            'full_name' => $department->full_name,
+                            'graduating_year' => $department->yearbook?->graduating_year,
+                            'group_photo' => $groupPhotos[0] ?? null,
+                            'group_photos' => $groupPhotos,
+                        ];
+                    })
                     ->values(),
             ],
         ]);
@@ -56,6 +67,9 @@ class StudentProfileController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'photo' => ['nullable', 'string', 'max:2048'],
             'photo_upload' => ['nullable', 'file', 'image', 'max:3072'],
+            'department_group_photo_upload' => ['nullable', 'file', 'image', 'max:4096'],
+            'department_group_photo_uploads' => ['nullable', 'array', 'max:10'],
+            'department_group_photo_uploads.*' => ['file', 'image', 'max:4096'],
             'motto' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:120'],
             'department_id' => ['required', 'integer', Rule::exists('departments', 'id')],
@@ -92,6 +106,7 @@ class StudentProfileController extends Controller
         }
 
         $photo = $this->resolvePhotoValue($profile, $validated, $request);
+        $this->appendDepartmentGroupPhotos($department, $request);
 
         $profile->fill([
             'name' => $validated['name'],
@@ -104,7 +119,11 @@ class StudentProfileController extends Controller
         ]);
         $profile->save();
 
-        $profile->load(['department:id,label,full_name,yearbook_id', 'yearbook:id,graduating_year']);
+        $profile->load([
+            'department:id,label,full_name,yearbook_id,group_photo',
+            'department.groupPhotos:id,department_id,photo,sort_order',
+            'yearbook:id,graduating_year',
+        ]);
 
         return response()->json([
             'message' => 'Profile updated successfully.',
@@ -165,6 +184,57 @@ class StudentProfileController extends Controller
         return StudentPhotoMedia::publicUrlForStoragePath($path);
     }
 
+    private function appendDepartmentGroupPhotos(Department $department, Request $request): void
+    {
+        $files = $request->file('department_group_photo_uploads', []);
+
+        if (! is_array($files)) {
+            $files = [];
+        }
+
+        $singleUpload = $request->file('department_group_photo_upload');
+
+        if ($singleUpload instanceof UploadedFile) {
+            $files[] = $singleUpload;
+        }
+
+        $validatedUploads = collect($files)
+            ->filter(fn ($file) => $file instanceof UploadedFile)
+            ->values();
+
+        if ($validatedUploads->isEmpty()) {
+            return;
+        }
+
+        $nextSortOrder = (int) $department->groupPhotos()->max('sort_order');
+        $firstStoredPhoto = null;
+
+        foreach ($validatedUploads as $upload) {
+            $storedPhoto = $this->storeUploadedDepartmentGroupPhoto($upload);
+
+            if (! $firstStoredPhoto) {
+                $firstStoredPhoto = $storedPhoto;
+            }
+
+            $department->groupPhotos()->create([
+                'photo' => $storedPhoto,
+                'sort_order' => ++$nextSortOrder,
+            ]);
+        }
+
+        if (! filled($department->group_photo) && is_string($firstStoredPhoto)) {
+            $department->group_photo = $firstStoredPhoto;
+            $department->save();
+        }
+    }
+
+    private function storeUploadedDepartmentGroupPhoto(UploadedFile $file): string
+    {
+        $path = $file->store(DepartmentGroupPhotoMedia::DIRECTORY, 'public');
+
+        return DepartmentGroupPhotoMedia::publicUrlForStoragePath($path);
+    }
+
     private function deleteManagedPhoto(?string $photoUrl): void
     {
         $storageRelativePath = StudentPhotoMedia::storagePathFromValue($photoUrl);
@@ -199,7 +269,34 @@ class StudentProfileController extends Controller
                 'id' => $profile->department?->id,
                 'label' => $profile->department?->label,
                 'full_name' => $profile->department?->full_name,
+                'group_photo' => $this->departmentGroupPhotos($profile->department)[0] ?? null,
+                'group_photos' => $this->departmentGroupPhotos($profile->department),
             ],
         ];
+    }
+
+    private function departmentGroupPhotos(?Department $department): array
+    {
+        if (! $department) {
+            return [];
+        }
+
+        $groupPhotos = $department->groupPhotos
+            ->pluck('photo')
+            ->map(fn ($photo) => DepartmentGroupPhotoMedia::normalizePublicUrl($photo))
+            ->filter(fn ($photo) => is_string($photo) && trim($photo) !== '')
+            ->values();
+
+        if ($groupPhotos->isNotEmpty()) {
+            return $groupPhotos->all();
+        }
+
+        $singlePhoto = DepartmentGroupPhotoMedia::normalizePublicUrl($department->group_photo);
+
+        if (is_string($singlePhoto) && trim($singlePhoto) !== '') {
+            return [$singlePhoto];
+        }
+
+        return [];
     }
 }

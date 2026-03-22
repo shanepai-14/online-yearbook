@@ -4,11 +4,13 @@ import { Heart } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import BookView from '@/components/yearbook/BookView';
 import CardModal from '@/components/yearbook/CardModal';
 import { yearbookPalette as palette } from '@/lib/theme';
 
 const FACULTY_PLACEHOLDER = 'https://via.placeholder.com/120';
 const STUDENT_PLACEHOLDER = 'https://via.placeholder.com/160';
+const GROUP_PHOTO_PLACEHOLDER = 'https://via.placeholder.com/1200x720?text=Department+Group+Photo';
 
 function reactionKey(type, id) {
     return `${type}:${id}`;
@@ -198,6 +200,131 @@ function StudentCard({ student, alignment = 'left', reaction, onClick }) {
     );
 }
 
+function DepartmentGroupPhotoSlider({ photos = [], alignment = 'left', label }) {
+    const safePhotos = Array.isArray(photos)
+        ? photos.filter((photo) => typeof photo === 'string' && photo.trim() !== '')
+        : [];
+    const photosKey = safePhotos.join('|');
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [touchStartX, setTouchStartX] = useState(null);
+
+    const goNext = () => {
+        setActiveIndex((current) => (current + 1) % safePhotos.length);
+    };
+
+    const goPrev = () => {
+        setActiveIndex((current) => (current - 1 + safePhotos.length) % safePhotos.length);
+    };
+
+    useEffect(() => {
+        setActiveIndex(0);
+    }, [photosKey]);
+
+    useEffect(() => {
+        if (safePhotos.length <= 1) {
+            return;
+        }
+
+        const intervalId = window.setInterval(() => {
+            goNext();
+        }, 4500);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [safePhotos.length]);
+
+    if (safePhotos.length === 0) {
+        return null;
+    }
+
+    const alignClass =
+        alignment === 'center' ? 'mx-auto max-w-4xl' : alignment === 'right' ? 'ml-auto max-w-4xl' : '';
+
+    return (
+        <div className="mb-10">
+            <SectionDivider label={label} alignment={alignment} />
+            <div
+                className={`relative overflow-hidden border bg-white ${alignClass}`}
+                style={{ borderColor: palette.cardBorder }}
+                onTouchStart={(event) => setTouchStartX(event.changedTouches[0]?.clientX ?? null)}
+                onTouchEnd={(event) => {
+                    if (touchStartX === null || safePhotos.length <= 1) {
+                        return;
+                    }
+
+                    const touchEndX = event.changedTouches[0]?.clientX ?? touchStartX;
+                    const delta = touchEndX - touchStartX;
+
+                    if (Math.abs(delta) >= 50) {
+                        if (delta < 0) {
+                            goNext();
+                        } else {
+                            goPrev();
+                        }
+                    }
+
+                    setTouchStartX(null);
+                }}
+            >
+                <div
+                    className="flex transition-transform duration-500 ease-out"
+                    style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+                >
+                    {safePhotos.map((photo, index) => (
+                        <div key={`${photo}-${index}`} className="w-full shrink-0">
+                            <img
+                                src={photo}
+                                alt={`Department group ${index + 1}`}
+                                className="h-56 w-full object-cover sm:h-72 md:h-80"
+                                onError={(event) => {
+                                    event.currentTarget.onerror = null;
+                                    event.currentTarget.src = GROUP_PHOTO_PLACEHOLDER;
+                                }}
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                {safePhotos.length > 1 ? (
+                    <>
+                        <button
+                            type="button"
+                            onClick={goPrev}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/55 px-2 py-1 text-sm text-white transition hover:bg-black/70"
+                            aria-label="Previous group photo"
+                        >
+                            ‹
+                        </button>
+                        <button
+                            type="button"
+                            onClick={goNext}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/55 px-2 py-1 text-sm text-white transition hover:bg-black/70"
+                            aria-label="Next group photo"
+                        >
+                            ›
+                        </button>
+                        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/45 px-2 py-1">
+                            {safePhotos.map((photo, index) => (
+                                <button
+                                    key={`${photo}-dot-${index}`}
+                                    type="button"
+                                    onClick={() => setActiveIndex(index)}
+                                    className="h-1.5 w-1.5 rounded-full transition"
+                                    style={{
+                                        background: index === activeIndex ? palette.gold : 'rgba(255,255,255,0.5)',
+                                    }}
+                                    aria-label={`Go to group photo ${index + 1}`}
+                                />
+                            ))}
+                        </div>
+                    </>
+                ) : null}
+            </div>
+        </div>
+    );
+}
+
 export default function GraduatesYearPage() {
     const { year } = useParams();
     const [yearbook, setYearbook] = useState(null);
@@ -219,6 +346,7 @@ export default function GraduatesYearPage() {
 
     const [activeDept, setActiveDept] = useState('');
     const [search, setSearch] = useState('');
+    const [viewMode, setViewMode] = useState('default');
     const [reactionsByKey, setReactionsByKey] = useState({});
     const [reactionLoadingByKey, setReactionLoadingByKey] = useState({});
     const [modalState, setModalState] = useState({
@@ -277,7 +405,7 @@ export default function GraduatesYearPage() {
             ...currentState,
             open: false,
         }));
-    }, [year, activeDept, search]);
+    }, [year, activeDept, search, viewMode]);
 
     useEffect(() => {
         if (!yearbook) {
@@ -347,6 +475,13 @@ export default function GraduatesYearPage() {
     const schoolName = yearbook.school_name || 'School';
 
     const activeDepartment = enrichedDepartments.find((department) => department.tabId === activeDept) ?? null;
+    const activeDepartmentGroupPhotos = activeDepartment
+        ? Array.isArray(activeDepartment.group_photos)
+            ? activeDepartment.group_photos
+            : activeDepartment.group_photo
+                ? [activeDepartment.group_photo]
+                : []
+        : [];
 
     const searchResults = search.trim()
         ? enrichedDepartments.flatMap((department) =>
@@ -496,8 +631,8 @@ export default function GraduatesYearPage() {
                 className="border-b-2"
                 style={{ background: palette.navy, borderColor: palette.goldDark }}
             >
-                <div className="flex h-14 w-full items-center justify-between px-4 sm:px-6 lg:px-10">
-                    <div className="flex items-center gap-3">
+                <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
+                    <div className="flex min-w-0 items-center gap-3">
                         <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-white">
                             <DVCLogo />
                         </div>
@@ -509,226 +644,290 @@ export default function GraduatesYearPage() {
                         </span>
                     </div>
 
-                    <input
-                        type="text"
-                        placeholder="Search students..."
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        className="w-44 rounded px-3 py-1.5 text-xs focus:outline-none sm:w-52"
+                    <div
+                        className="flex items-center rounded-full border p-0.5"
                         style={{
-                            fontFamily: "'Helvetica Neue', sans-serif",
+                            borderColor: `${palette.goldDark}88`,
                             background: 'rgba(255,255,255,0.06)',
-                            border: `0.5px solid ${palette.goldDark}66`,
-                            color: '#e8e4d4',
                         }}
-                    />
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('default')}
+                            className="rounded-full px-3 py-1 text-xs transition"
+                            style={{
+                                fontFamily: "'Helvetica Neue', sans-serif",
+                                background: viewMode === 'default' ? palette.gold : 'transparent',
+                                color: viewMode === 'default' ? palette.navy : '#e8e4d4',
+                            }}
+                        >
+                            ⊞ Default
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('book')}
+                            className="rounded-full px-3 py-1 text-xs transition"
+                            style={{
+                                fontFamily: "'Helvetica Neue', sans-serif",
+                                background: viewMode === 'book' ? palette.gold : 'transparent',
+                                color: viewMode === 'book' ? palette.navy : '#e8e4d4',
+                            }}
+                        >
+                            📖 Book
+                        </button>
+                    </div>
+
+                    {viewMode === 'default' ? (
+                        <input
+                            type="text"
+                            placeholder="Search students..."
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            className="w-44 rounded px-3 py-1.5 text-xs focus:outline-none sm:w-52"
+                            style={{
+                                fontFamily: "'Helvetica Neue', sans-serif",
+                                background: 'rgba(255,255,255,0.06)',
+                                border: `0.5px solid ${palette.goldDark}66`,
+                                color: '#e8e4d4',
+                            }}
+                        />
+                    ) : (
+                        <div
+                            className="hidden text-[11px] uppercase tracking-[0.16em] sm:block"
+                            style={{ fontFamily: "'Helvetica Neue', sans-serif", color: '#e8e4d4a8' }}
+                        >
+                            Book Mode
+                        </div>
+                    )}
                 </div>
             </nav>
 
-            <section
-                className="relative overflow-hidden border-b-2"
-                style={{ background: palette.navy, borderColor: palette.goldDark }}
-            >
-                <div className="px-4 pb-10 pt-12 sm:px-6 lg:px-10">
-                    <div
-                        className="absolute right-0 top-0 h-full w-72"
-                        style={{
-                            background: 'rgba(184,56,40,0.07)',
-                            clipPath: 'polygon(15% 0,100% 0,100% 100%,0% 100%)',
-                        }}
-                    />
-
-                    <div
-                        className={`mb-3 text-xs uppercase tracking-[0.2em] ${textAlignClass}`}
-                        style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.goldDark }}
+            {viewMode === 'default' ? (
+                <>
+                    <section
+                        className="relative overflow-hidden border-b-2"
+                        style={{ background: palette.navy, borderColor: palette.goldDark }}
                     >
-                        {yearbook.academic_year_text}
-                    </div>
-
-                    <h1 className={`mb-2 text-4xl font-normal tracking-wide text-white ${textAlignClass}`}>
-                        Class of <span style={{ color: palette.gold }}>{yearbook.graduating_year}</span>
-                    </h1>
-
-                    <div className={`my-4 h-0.5 w-12 ${heroDividerPositionClass}`} style={{ background: palette.red }} />
-
-                    <p
-                        className={`mb-8 max-w-lg text-sm leading-relaxed ${textAlignClass} ${heroDescriptionPositionClass}`}
-                        style={{ fontFamily: "'Helvetica Neue', sans-serif", color: 'rgba(255,255,255,0.55)' }}
-                    >
-                        {yearbook.hero_description}
-                    </p>
-
-                    <div className={`flex w-full gap-0 overflow-x-auto ${justifyClass}`}>
-                        {stats.map((stat, index) => (
+                        <div className="px-4 pb-10 pt-12 sm:px-6 lg:px-10">
                             <div
-                                key={stat[1]}
-                                className={`shrink-0 ${textAlignClass} ${index < stats.length - 1 ? 'mr-8 pr-8' : ''}`}
+                                className="absolute right-0 top-0 h-full w-72"
                                 style={{
-                                    borderRight:
-                                        index < stats.length - 1
-                                            ? '0.5px solid rgba(232,217,138,0.2)'
-                                            : 'none',
+                                    background: 'rgba(184,56,40,0.07)',
+                                    clipPath: 'polygon(15% 0,100% 0,100% 100%,0% 100%)',
                                 }}
+                            />
+
+                            <div
+                                className={`mb-3 text-xs uppercase tracking-[0.2em] ${textAlignClass}`}
+                                style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.goldDark }}
                             >
-                                <div className="text-2xl" style={{ color: palette.gold }}>
-                                    {stat[0]}
-                                </div>
-                                <div
-                                    className="mt-1 text-xs uppercase tracking-[0.15em]"
+                                {yearbook.academic_year_text}
+                            </div>
+
+                            <h1 className={`mb-2 text-4xl font-normal tracking-wide text-white ${textAlignClass}`}>
+                                Class of <span style={{ color: palette.gold }}>{yearbook.graduating_year}</span>
+                            </h1>
+
+                            <div className={`my-4 h-0.5 w-12 ${heroDividerPositionClass}`} style={{ background: palette.red }} />
+
+                            <p
+                                className={`mb-8 max-w-lg text-sm leading-relaxed ${textAlignClass} ${heroDescriptionPositionClass}`}
+                                style={{ fontFamily: "'Helvetica Neue', sans-serif", color: 'rgba(255,255,255,0.55)' }}
+                            >
+                                {yearbook.hero_description}
+                            </p>
+
+                            <div className={`flex w-full gap-0 overflow-x-auto ${justifyClass}`}>
+                                {stats.map((stat, index) => (
+                                    <div
+                                        key={stat[1]}
+                                        className={`shrink-0 ${textAlignClass} ${index < stats.length - 1 ? 'mr-8 pr-8' : ''}`}
+                                        style={{
+                                            borderRight:
+                                                index < stats.length - 1
+                                                    ? '0.5px solid rgba(232,217,138,0.2)'
+                                                    : 'none',
+                                        }}
+                                    >
+                                        <div className="text-2xl" style={{ color: palette.gold }}>
+                                            {stat[0]}
+                                        </div>
+                                        <div
+                                            className="mt-1 text-xs uppercase tracking-[0.15em]"
+                                            style={{
+                                                fontFamily: "'Helvetica Neue', sans-serif",
+                                                color: 'rgba(255,255,255,0.4)',
+                                            }}
+                                        >
+                                            {stat[1]}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    <div className="border-b bg-white" style={{ borderColor: palette.cardBorder }}>
+                        <div className={`flex w-full overflow-x-auto px-4 sm:px-6 lg:px-10 ${justifyClass}`}>
+                            {enrichedDepartments.map((department) => (
+                                <button
+                                    key={department.tabId}
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveDept(department.tabId);
+                                        setSearch('');
+                                    }}
+                                    className="cursor-pointer shrink-0 px-5 py-4 text-xs uppercase tracking-[0.15em] transition-all duration-200"
                                     style={{
                                         fontFamily: "'Helvetica Neue', sans-serif",
-                                        color: 'rgba(255,255,255,0.4)',
+                                        color: activeDept === department.tabId ? palette.navy : palette.muted,
+                                        fontWeight: activeDept === department.tabId ? 500 : 400,
+                                        borderBottom:
+                                            activeDept === department.tabId
+                                                ? `2px solid ${palette.red}`
+                                                : '2px solid transparent',
                                     }}
                                 >
-                                    {stat[1]}
-                                </div>
-                            </div>
-                        ))}
+                                    {department.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            </section>
 
-            <div className="border-b bg-white" style={{ borderColor: palette.cardBorder }}>
-                <div className={`flex w-full overflow-x-auto px-4 sm:px-6 lg:px-10 ${justifyClass}`}>
-                    {enrichedDepartments.map((department) => (
-                        <button
-                            key={department.tabId}
-                            type="button"
-                            onClick={() => {
-                                setActiveDept(department.tabId);
-                                setSearch('');
-                            }}
-                            className="cursor-pointer shrink-0 px-5 py-4 text-xs uppercase tracking-[0.15em] transition-all duration-200"
-                            style={{
-                                fontFamily: "'Helvetica Neue', sans-serif",
-                                color: activeDept === department.tabId ? palette.navy : palette.muted,
-                                fontWeight: activeDept === department.tabId ? 500 : 400,
-                                borderBottom:
-                                    activeDept === department.tabId
-                                        ? `2px solid ${palette.red}`
-                                        : '2px solid transparent',
-                            }}
-                        >
-                            {department.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                    <main style={{ background: palette.lightBg, minHeight: '60vh' }}>
+                        <div className="px-4 py-9 sm:px-6 lg:px-10">
+                            {searchResults ? (
+                                <>
+                                    <div
+                                        className={`mb-5 text-xs uppercase tracking-[0.15em] ${textAlignClass}`}
+                                        style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.muted }}
+                                    >
+                                        {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{search}"
+                                    </div>
 
-            <main style={{ background: palette.lightBg, minHeight: '60vh' }}>
-                <div className="px-4 py-9 sm:px-6 lg:px-10">
-                    {searchResults ? (
-                        <>
-                            <div
-                                className={`mb-5 text-xs uppercase tracking-[0.15em] ${textAlignClass}`}
-                                style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.muted }}
-                            >
-                                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{search}"
-                            </div>
+                                    <div
+                                        className={`grid gap-2.5 ${studentGridJustifyClass}`}
+                                        style={{ gridTemplateColumns: studentGridTemplateColumns }}
+                                    >
+                                        {searchResults.map((student) => (
+                                            <StudentCard
+                                                key={student.id}
+                                                student={student}
+                                                alignment={contentAlignment}
+                                                reaction={getReactionState('student', student)}
+                                                onClick={() => openCardModal('student', searchResults, student.id)}
+                                            />
+                                        ))}
+                                    </div>
+                                </>
+                            ) : activeDepartment ? (
+                                <>
+                                    <div
+                                        className="mb-7 border border-l-4 bg-white p-6"
+                                        style={{ borderColor: palette.cardBorder, borderLeftColor: palette.red }}
+                                    >
+                                        <div
+                                            className={`mb-1.5 text-xs uppercase tracking-[0.2em] ${textAlignClass}`}
+                                            style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.red }}
+                                        >
+                                            {activeDepartment.label}
+                                        </div>
+                                        <div
+                                            className={`mb-1.5 text-2xl font-normal ${textAlignClass}`}
+                                            style={{ color: palette.navy, letterSpacing: '0.5px' }}
+                                        >
+                                            {activeDepartment.full_name}
+                                        </div>
+                                        <div
+                                            className={`text-sm leading-relaxed ${textAlignClass}`}
+                                            style={{ fontFamily: "'Helvetica Neue', sans-serif", color: '#6b7280' }}
+                                        >
+                                            {activeDepartment.description}
+                                        </div>
+                                    </div>
 
-                            <div
-                                className={`grid gap-2.5 ${studentGridJustifyClass}`}
-                                style={{ gridTemplateColumns: studentGridTemplateColumns }}
-                            >
-                                {searchResults.map((student) => (
-                                    <StudentCard
-                                        key={student.id}
-                                        student={student}
+                                    <DepartmentGroupPhotoSlider
+                                        photos={activeDepartmentGroupPhotos}
                                         alignment={contentAlignment}
-                                        reaction={getReactionState('student', student)}
-                                        onClick={() => openCardModal('student', searchResults, student.id)}
+                                        label={`Group Photos · ${activeDepartment.label}`}
                                     />
-                                ))}
-                            </div>
-                        </>
-                    ) : activeDepartment ? (
-                        <>
-                            <div
-                                className="mb-7 border border-l-4 bg-white p-6"
-                                style={{ borderColor: palette.cardBorder, borderLeftColor: palette.red }}
-                            >
-                                <div
-                                    className={`mb-1.5 text-xs uppercase tracking-[0.2em] ${textAlignClass}`}
-                                    style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.red }}
-                                >
-                                    {activeDepartment.label}
-                                </div>
-                                <div
-                                    className={`mb-1.5 text-2xl font-normal ${textAlignClass}`}
-                                    style={{ color: palette.navy, letterSpacing: '0.5px' }}
-                                >
-                                    {activeDepartment.full_name}
-                                </div>
-                                <div
-                                    className={`text-sm leading-relaxed ${textAlignClass}`}
-                                    style={{ fontFamily: "'Helvetica Neue', sans-serif", color: '#6b7280' }}
-                                >
-                                    {activeDepartment.description}
-                                </div>
-                            </div>
 
-                            <SectionDivider label="Faculty" alignment={contentAlignment} />
-                            <div
-                                className={`mb-10 grid gap-2.5 ${facultyGridJustifyClass}`}
-                                style={{ gridTemplateColumns: facultyGridTemplateColumns }}
-                            >
-                                {activeDepartment.faculty.map((faculty) => (
-                                    <FacultyCard
-                                        key={faculty.id}
-                                        faculty={faculty}
+                                    <SectionDivider label="Faculty" alignment={contentAlignment} />
+                                    <div
+                                        className={`mb-10 grid gap-2.5 ${facultyGridJustifyClass}`}
+                                        style={{ gridTemplateColumns: facultyGridTemplateColumns }}
+                                    >
+                                        {activeDepartment.faculty.map((faculty) => (
+                                            <FacultyCard
+                                                key={faculty.id}
+                                                faculty={faculty}
+                                                alignment={contentAlignment}
+                                                reaction={getReactionState('faculty', faculty)}
+                                                onClick={() => openCardModal('faculty', activeDepartment.faculty, faculty.id)}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    <SectionDivider
+                                        label={`Graduates · ${activeDepartment.label} · Class of ${yearbook.graduating_year}`}
                                         alignment={contentAlignment}
-                                        reaction={getReactionState('faculty', faculty)}
-                                        onClick={() => openCardModal('faculty', activeDepartment.faculty, faculty.id)}
                                     />
-                                ))}
-                            </div>
+                                    <div
+                                        className={`grid gap-2.5 ${studentGridJustifyClass}`}
+                                        style={{ gridTemplateColumns: studentGridTemplateColumns }}
+                                    >
+                                        {activeDepartment.students.map((student) => (
+                                            <StudentCard
+                                                key={student.id}
+                                                student={student}
+                                                alignment={contentAlignment}
+                                                reaction={getReactionState('student', student)}
+                                                onClick={() => openCardModal('student', activeDepartment.students, student.id)}
+                                            />
+                                        ))}
+                                    </div>
+                                </>
+                            ) : null}
+                        </div>
+                    </main>
 
-                            <SectionDivider
-                                label={`Graduates · ${activeDepartment.label} · Class of ${yearbook.graduating_year}`}
-                                alignment={contentAlignment}
-                            />
-                            <div
-                                className={`grid gap-2.5 ${studentGridJustifyClass}`}
-                                style={{ gridTemplateColumns: studentGridTemplateColumns }}
-                            >
-                                {activeDepartment.students.map((student) => (
-                                    <StudentCard
-                                        key={student.id}
-                                        student={student}
-                                        alignment={contentAlignment}
-                                        reaction={getReactionState('student', student)}
-                                        onClick={() => openCardModal('student', activeDepartment.students, student.id)}
-                                    />
-                                ))}
-                            </div>
-                        </>
-                    ) : null}
-                </div>
-            </main>
-
-            <footer
-                className="border-t-2"
-                style={{ background: palette.navy, borderColor: palette.goldDark }}
-            >
-                <div className="flex w-full items-center justify-between px-4 py-5 sm:px-6 lg:px-10">
-                    <div
-                        className="text-xs uppercase tracking-[0.2em]"
-                        style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.gold }}
+                    <footer
+                        className="border-t-2"
+                        style={{ background: palette.navy, borderColor: palette.goldDark }}
                     >
-                        {schoolName}
-                    </div>
-                    <div
-                        className="text-xs"
-                        style={{
-                            fontFamily: "'Helvetica Neue', sans-serif",
-                            color: 'rgba(255,255,255,0.35)',
-                            letterSpacing: '1px',
-                        }}
-                    >
-                        YEARBOOK {yearbook.graduating_year} · ALL RIGHTS RESERVED
-                    </div>
-                </div>
-            </footer>
+                        <div className="flex w-full items-center justify-between px-4 py-5 sm:px-6 lg:px-10">
+                            <div
+                                className="text-xs uppercase tracking-[0.2em]"
+                                style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.gold }}
+                            >
+                                {schoolName}
+                            </div>
+                            <div
+                                className="text-xs"
+                                style={{
+                                    fontFamily: "'Helvetica Neue', sans-serif",
+                                    color: 'rgba(255,255,255,0.35)',
+                                    letterSpacing: '1px',
+                                }}
+                            >
+                                YEARBOOK {yearbook.graduating_year} · ALL RIGHTS RESERVED
+                            </div>
+                        </div>
+                    </footer>
+                </>
+            ) : (
+                <BookView
+                    logo={<DVCLogo />}
+                    schoolName={schoolName}
+                    yearbook={yearbook}
+                    departments={enrichedDepartments}
+                    activeDept={activeDept}
+                    onActiveDeptChange={setActiveDept}
+                    search={search}
+                    onSearchChange={setSearch}
+                    onOpenCardModal={openCardModal}
+                />
+            )}
 
             <CardModal
                 open={modalState.open}

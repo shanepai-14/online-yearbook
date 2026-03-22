@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Admin\SchoolSettingController as AdminSchoolSetting
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\ReactionController;
+use App\Http\Controllers\Api\SchoolSettingController;
 use App\Http\Controllers\Api\StudentProfileController;
 use App\Http\Controllers\Api\YearbookController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,8 @@ Route::middleware('web')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:web');
     Route::get('/me', [AuthController::class, 'me'])->middleware('auth:web');
 
+    Route::get('/school-setting', [SchoolSettingController::class, 'show']);
+    Route::get('/yearbooks', [YearbookController::class, 'index']);
     Route::get('/yearbooks/{year}', [YearbookController::class, 'show'])->whereNumber('year');
     Route::get('/reactions/{type}/{targetId}', [ReactionController::class, 'show'])
         ->where('type', 'student|faculty')

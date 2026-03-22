@@ -39,14 +39,22 @@ export default function StudentProfilePage() {
     const [success, setSuccess] = useState('');
     const [photoFile, setPhotoFile] = useState(null);
     const [photoPreview, setPhotoPreview] = useState('');
+    const [departmentGroupPhotoFiles, setDepartmentGroupPhotoFiles] = useState([]);
+    const [departmentGroupPhotoPreviews, setDepartmentGroupPhotoPreviews] = useState([]);
 
     useEffect(() => {
         return () => {
             if (photoPreview.startsWith('blob:')) {
                 URL.revokeObjectURL(photoPreview);
             }
+
+            departmentGroupPhotoPreviews.forEach((preview) => {
+                if (typeof preview === 'string' && preview.startsWith('blob:')) {
+                    URL.revokeObjectURL(preview);
+                }
+            });
         };
-    }, [photoPreview]);
+    }, [photoPreview, departmentGroupPhotoPreviews]);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -67,6 +75,8 @@ export default function StudentProfilePage() {
                 });
                 setPhotoFile(null);
                 setPhotoPreview('');
+                setDepartmentGroupPhotoFiles([]);
+                setDepartmentGroupPhotoPreviews([]);
             } catch (requestError) {
                 setError(requestError.response?.data?.message || 'Unable to load student profile.');
             } finally {
@@ -82,6 +92,10 @@ export default function StudentProfilePage() {
             (department) => String(department.graduating_year) === String(form.graduating_year),
         );
     }, [departments, form.graduating_year]);
+
+    const selectedDepartment = useMemo(() => {
+        return departments.find((department) => String(department.id) === String(form.department_id)) || null;
+    }, [departments, form.department_id]);
 
     useEffect(() => {
         if (availableDepartments.length === 0) {
@@ -125,6 +139,22 @@ export default function StudentProfilePage() {
         });
     };
 
+    const handleDepartmentGroupPhotoFileChange = (event) => {
+        const files = Array.from(event.target.files || []);
+
+        setDepartmentGroupPhotoFiles(files);
+
+        setDepartmentGroupPhotoPreviews((currentPreviews) => {
+            currentPreviews.forEach((preview) => {
+                if (typeof preview === 'string' && preview.startsWith('blob:')) {
+                    URL.revokeObjectURL(preview);
+                }
+            });
+
+            return files.map((file) => URL.createObjectURL(file));
+        });
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         setError('');
@@ -145,6 +175,10 @@ export default function StudentProfilePage() {
                 payload.append('photo', form.photo || '');
             }
 
+            departmentGroupPhotoFiles.forEach((file) => {
+                payload.append('department_group_photo_uploads[]', file);
+            });
+
             const response = await axios.post('/api/student/profile', payload, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -160,6 +194,16 @@ export default function StudentProfilePage() {
                 return '';
             });
             setPhotoFile(null);
+            setDepartmentGroupPhotoFiles([]);
+            setDepartmentGroupPhotoPreviews((currentPreviews) => {
+                currentPreviews.forEach((preview) => {
+                    if (typeof preview === 'string' && preview.startsWith('blob:')) {
+                        URL.revokeObjectURL(preview);
+                    }
+                });
+
+                return [];
+            });
 
             setForm((current) => ({
                 ...current,
@@ -169,6 +213,21 @@ export default function StudentProfilePage() {
                 badge: profile.badge || '',
                 department_id: profile.department_id ? String(profile.department_id) : '',
                 graduating_year: profile.graduating_year ? String(profile.graduating_year) : '',
+            }));
+            setDepartments((currentDepartments) => currentDepartments.map((department) => {
+                if (String(department.id) !== String(profile.department_id)) {
+                    return department;
+                }
+
+                const nextGroupPhotos = Array.isArray(profile.department?.group_photos)
+                    ? profile.department.group_photos
+                    : [];
+
+                return {
+                    ...department,
+                    group_photos: nextGroupPhotos,
+                    group_photo: nextGroupPhotos[0] || profile.department?.group_photo || department.group_photo || '',
+                };
             }));
             setSuccess('Profile updated successfully.');
         } catch (requestError) {
@@ -184,6 +243,15 @@ export default function StudentProfilePage() {
 
     const completion = completionPercent(form, Boolean(photoFile));
     const photoDisplay = photoPreview || form.photo || 'https://via.placeholder.com/320x320?text=Student';
+    const existingDepartmentGroupPhotos = Array.isArray(selectedDepartment?.group_photos)
+        ? selectedDepartment.group_photos
+        : selectedDepartment?.group_photo
+            ? [selectedDepartment.group_photo]
+            : [];
+    const departmentGroupPhotoDisplayList =
+        departmentGroupPhotoPreviews.length > 0
+            ? departmentGroupPhotoPreviews
+            : existingDepartmentGroupPhotos;
 
     return (
         <Card>
@@ -272,6 +340,45 @@ export default function StudentProfilePage() {
                                 </option>
                             ))}
                         </select>
+                    </div>
+
+                    <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="department_group_photo_upload">Department Group Photo</Label>
+                        <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            {departmentGroupPhotoDisplayList.length > 0 ? (
+                                <div className="flex gap-2 overflow-x-auto pb-1">
+                                    {departmentGroupPhotoDisplayList.map((photo, index) => (
+                                        <img
+                                            key={`${photo}-${index}`}
+                                            src={photo}
+                                            alt={`Department group preview ${index + 1}`}
+                                            className="h-36 w-52 shrink-0 rounded-lg object-cover ring-1 ring-slate-200 sm:h-44 sm:w-64"
+                                            onError={(event) => {
+                                                event.currentTarget.onerror = null;
+                                                event.currentTarget.src = 'https://via.placeholder.com/640x360?text=Department+Group+Photo';
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex h-36 items-center justify-center rounded-lg bg-white text-xs text-slate-500 ring-1 ring-slate-200 sm:h-44">
+                                    No department group photo uploaded yet.
+                                </div>
+                            )}
+                            <div className="min-w-0 flex-1 space-y-2">
+                                <Input
+                                    id="department_group_photo_upload"
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleDepartmentGroupPhotoFileChange}
+                                    className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+                                />
+                                <p className="text-xs text-slate-500">
+                                    Upload one or more JPG/PNG/WebP files (up to 4MB each) for your selected department.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="sm:col-span-2">
