@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpenText, LayoutDashboard, LogOut, Menu, Users, X } from 'lucide-react';
+import { BookOpenText, LayoutDashboard, Link as LinkIcon, LogOut, Menu, Users, X } from 'lucide-react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -10,6 +10,7 @@ const links = [
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/admin/yearbooks', label: 'Yearbooks', icon: BookOpenText },
     { to: '/admin/students', label: 'Students', icon: Users },
+    { to: '/admin/registration-links', label: 'Registration Links', icon: LinkIcon },
 ];
 
 function SidebarLinks() {

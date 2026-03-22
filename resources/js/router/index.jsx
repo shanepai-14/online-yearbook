@@ -4,12 +4,15 @@ import AdminLayout from '@/layouts/AdminLayout';
 import MainLayout from '@/layouts/MainLayout';
 import StudentLayout from '@/layouts/StudentLayout';
 import AdminDashboardPage from '@/pages/AdminDashboardPage';
+import AdminRegistrationLinkFormPage from '@/pages/AdminRegistrationLinkFormPage';
+import AdminRegistrationLinksPage from '@/pages/AdminRegistrationLinksPage';
 import AdminStudentsPage from '@/pages/AdminStudentsPage';
 import AdminYearbooksPage from '@/pages/AdminYearbooksPage';
 import GraduatesYearPage from '@/pages/GraduatesYearPage';
 import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import NotFoundPage from '@/pages/NotFoundPage';
+import RegisterByLinkPage from '@/pages/RegisterByLinkPage';
 import StudentDashboardPage from '@/pages/StudentDashboardPage';
 import StudentProfilePage from '@/pages/StudentProfilePage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
@@ -22,6 +25,7 @@ export function AppRouter() {
                 <Route element={<MainLayout />}>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/graduates/:year" element={<GraduatesYearPage />} />
+                    <Route path="/register/:token" element={<RegisterByLinkPage />} />
 
                     <Route element={<GuestOnlyRoute />}>
                         <Route path="/login" element={<LoginPage />} />
@@ -42,6 +46,9 @@ export function AppRouter() {
                         <Route path="/admin" element={<AdminDashboardPage />} />
                         <Route path="/admin/yearbooks" element={<AdminYearbooksPage />} />
                         <Route path="/admin/students" element={<AdminStudentsPage />} />
+                        <Route path="/admin/registration-links" element={<AdminRegistrationLinksPage />} />
+                        <Route path="/admin/registration-links/create" element={<AdminRegistrationLinkFormPage />} />
+                        <Route path="/admin/registration-links/:id" element={<AdminRegistrationLinkFormPage />} />
                     </Route>
                 </Route>
 

@@ -1,23 +1,27 @@
 import axios from 'axios';
-import { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, ArrowRight, Loader2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const initialFormState = {
     name: '',
     photo: '',
     motto: '',
     badge: '',
-    department_id: '',
+    class_motto: '',
+    department_label: '',
+    department_full_name: '',
     graduating_year: '',
 };
 
 function completionPercent(form, hasPendingPhotoUpload = false) {
-    const fields = ['name', 'photo', 'motto', 'badge', 'department_id', 'graduating_year'];
+    const fields = ['name', 'photo', 'motto', 'badge', 'department_label', 'graduating_year'];
     const completed = fields.filter((field) => {
         if (field === 'photo') {
             return hasPendingPhotoUpload || String(form.photo || '').trim() !== '';
@@ -29,54 +33,77 @@ function completionPercent(form, hasPendingPhotoUpload = false) {
     return Math.round((completed / fields.length) * 100);
 }
 
+function normalizeGroupPhotoItems(department) {
+    if (!department) {
+        return [];
+    }
+
+    if (Array.isArray(department.group_photo_items) && department.group_photo_items.length > 0) {
+        return department.group_photo_items
+            .filter((item) => item && String(item.photo || '').trim() !== '')
+            .map((item, index) => ({
+                id: item.id ?? null,
+                photo: item.photo,
+                sort_order: item.sort_order ?? index + 1,
+            }));
+    }
+
+    const fallbackPhotos = Array.isArray(department.group_photos)
+        ? department.group_photos
+        : department.group_photo
+            ? [department.group_photo]
+            : [];
+
+    return fallbackPhotos
+        .filter((photo) => String(photo || '').trim() !== '')
+        .map((photo, index) => ({
+            id: null,
+            photo,
+            sort_order: index + 1,
+        }));
+}
+
 export default function StudentProfilePage() {
     const [form, setForm] = useState(initialFormState);
-    const [years, setYears] = useState([]);
-    const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [photoFile, setPhotoFile] = useState(null);
     const [photoPreview, setPhotoPreview] = useState('');
-    const [departmentGroupPhotoFiles, setDepartmentGroupPhotoFiles] = useState([]);
-    const [departmentGroupPhotoPreviews, setDepartmentGroupPhotoPreviews] = useState([]);
+
+    const [groupPhotoItems, setGroupPhotoItems] = useState([]);
+    const [groupPhotoBusy, setGroupPhotoBusy] = useState(false);
+    const [groupPhotoMessage, setGroupPhotoMessage] = useState('');
+    const [groupPhotoError, setGroupPhotoError] = useState('');
 
     useEffect(() => {
         return () => {
             if (photoPreview.startsWith('blob:')) {
                 URL.revokeObjectURL(photoPreview);
             }
-
-            departmentGroupPhotoPreviews.forEach((preview) => {
-                if (typeof preview === 'string' && preview.startsWith('blob:')) {
-                    URL.revokeObjectURL(preview);
-                }
-            });
         };
-    }, [photoPreview, departmentGroupPhotoPreviews]);
+    }, [photoPreview]);
 
     useEffect(() => {
         const fetchProfile = async () => {
             try {
                 const response = await axios.get('/api/student/profile');
                 const profile = response.data.profile;
-                const options = response.data.options;
 
-                setYears(options?.years || []);
-                setDepartments(options?.departments || []);
                 setForm({
                     name: profile?.name || '',
                     photo: profile?.photo || '',
                     motto: profile?.motto || '',
                     badge: profile?.badge || '',
-                    department_id: profile?.department_id ? String(profile.department_id) : '',
+                    class_motto: profile?.class_motto || '',
+                    department_label: profile?.department?.label || '',
+                    department_full_name: profile?.department?.full_name || '',
                     graduating_year: profile?.graduating_year ? String(profile.graduating_year) : '',
                 });
+                setGroupPhotoItems(normalizeGroupPhotoItems(profile?.department));
                 setPhotoFile(null);
                 setPhotoPreview('');
-                setDepartmentGroupPhotoFiles([]);
-                setDepartmentGroupPhotoPreviews([]);
             } catch (requestError) {
                 setError(requestError.response?.data?.message || 'Unable to load student profile.');
             } finally {
@@ -86,33 +113,6 @@ export default function StudentProfilePage() {
 
         fetchProfile();
     }, []);
-
-    const availableDepartments = useMemo(() => {
-        return departments.filter(
-            (department) => String(department.graduating_year) === String(form.graduating_year),
-        );
-    }, [departments, form.graduating_year]);
-
-    const selectedDepartment = useMemo(() => {
-        return departments.find((department) => String(department.id) === String(form.department_id)) || null;
-    }, [departments, form.department_id]);
-
-    useEffect(() => {
-        if (availableDepartments.length === 0) {
-            return;
-        }
-
-        const found = availableDepartments.some(
-            (department) => String(department.id) === String(form.department_id),
-        );
-
-        if (!found) {
-            setForm((current) => ({
-                ...current,
-                department_id: String(availableDepartments[0].id),
-            }));
-        }
-    }, [availableDepartments, form.department_id]);
 
     const handleInputChange = (field) => (event) => {
         setForm((current) => ({
@@ -139,20 +139,108 @@ export default function StudentProfilePage() {
         });
     };
 
-    const handleDepartmentGroupPhotoFileChange = (event) => {
+    const applyDepartmentGroupPhotoUpdate = (departmentPayload) => {
+        setGroupPhotoItems(normalizeGroupPhotoItems(departmentPayload));
+    };
+
+    const handleGroupPhotoUpload = async (event) => {
         const files = Array.from(event.target.files || []);
+        event.target.value = '';
 
-        setDepartmentGroupPhotoFiles(files);
+        if (files.length === 0 || groupPhotoBusy) {
+            return;
+        }
 
-        setDepartmentGroupPhotoPreviews((currentPreviews) => {
-            currentPreviews.forEach((preview) => {
-                if (typeof preview === 'string' && preview.startsWith('blob:')) {
-                    URL.revokeObjectURL(preview);
-                }
+        setGroupPhotoBusy(true);
+        setGroupPhotoError('');
+        setGroupPhotoMessage('');
+
+        try {
+            const payload = new FormData();
+
+            files.forEach((file) => {
+                payload.append('department_group_photo_uploads[]', file);
             });
 
-            return files.map((file) => URL.createObjectURL(file));
-        });
+            const response = await axios.post('/api/student/profile/department-group-photos', payload, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            applyDepartmentGroupPhotoUpdate(response.data.department);
+            setGroupPhotoMessage(response.data.message || 'Department group photo updated successfully.');
+        } catch (requestError) {
+            setGroupPhotoError(requestError.response?.data?.message || 'Unable to upload department group photos.');
+        } finally {
+            setGroupPhotoBusy(false);
+        }
+    };
+
+    const handleReorderPhoto = async (index, direction) => {
+        if (groupPhotoBusy) {
+            return;
+        }
+
+        const targetIndex = index + direction;
+
+        if (targetIndex < 0 || targetIndex >= groupPhotoItems.length) {
+            return;
+        }
+
+        const currentItems = [...groupPhotoItems];
+        const nextItems = [...groupPhotoItems];
+        const movedItem = nextItems[index];
+        nextItems[index] = nextItems[targetIndex];
+        nextItems[targetIndex] = movedItem;
+
+        const nextIds = nextItems.map((item) => item.id);
+
+        if (nextIds.some((id) => !id)) {
+            return;
+        }
+
+        setGroupPhotoItems(nextItems);
+        setGroupPhotoBusy(true);
+        setGroupPhotoError('');
+        setGroupPhotoMessage('');
+
+        try {
+            const response = await axios.patch('/api/student/profile/department-group-photos/reorder', {
+                photo_ids: nextIds,
+            });
+
+            applyDepartmentGroupPhotoUpdate(response.data.department);
+            setGroupPhotoMessage(response.data.message || 'Department group photo sequence updated.');
+        } catch (requestError) {
+            setGroupPhotoItems(currentItems);
+            setGroupPhotoError(requestError.response?.data?.message || 'Unable to reorder photos.');
+        } finally {
+            setGroupPhotoBusy(false);
+        }
+    };
+
+    const handleRemovePhoto = async (photoItem) => {
+        if (!photoItem?.id || groupPhotoBusy) {
+            return;
+        }
+
+        setGroupPhotoBusy(true);
+        setGroupPhotoError('');
+        setGroupPhotoMessage('');
+
+        try {
+            const response = await axios.delete(
+                `/api/student/profile/department-group-photos/${photoItem.id}`,
+            );
+
+            applyDepartmentGroupPhotoUpdate(response.data.department);
+            setGroupPhotoMessage(response.data.message || 'Department group photo removed.');
+        } catch (requestError) {
+            setGroupPhotoError(requestError.response?.data?.message || 'Unable to remove photo.');
+        } finally {
+            setGroupPhotoBusy(false);
+        }
     };
 
     const handleSubmit = async (event) => {
@@ -166,18 +254,13 @@ export default function StudentProfilePage() {
             payload.append('name', form.name);
             payload.append('motto', form.motto);
             payload.append('badge', form.badge);
-            payload.append('department_id', String(Number(form.department_id)));
-            payload.append('graduating_year', String(Number(form.graduating_year)));
+            payload.append('class_motto', form.class_motto || '');
 
             if (photoFile) {
                 payload.append('photo_upload', photoFile);
             } else {
                 payload.append('photo', form.photo || '');
             }
-
-            departmentGroupPhotoFiles.forEach((file) => {
-                payload.append('department_group_photo_uploads[]', file);
-            });
 
             const response = await axios.post('/api/student/profile', payload, {
                 headers: {
@@ -194,41 +277,18 @@ export default function StudentProfilePage() {
                 return '';
             });
             setPhotoFile(null);
-            setDepartmentGroupPhotoFiles([]);
-            setDepartmentGroupPhotoPreviews((currentPreviews) => {
-                currentPreviews.forEach((preview) => {
-                    if (typeof preview === 'string' && preview.startsWith('blob:')) {
-                        URL.revokeObjectURL(preview);
-                    }
-                });
 
-                return [];
+            setForm({
+                name: profile?.name || '',
+                photo: profile?.photo || '',
+                motto: profile?.motto || '',
+                badge: profile?.badge || '',
+                class_motto: profile?.class_motto || '',
+                department_label: profile?.department?.label || '',
+                department_full_name: profile?.department?.full_name || '',
+                graduating_year: profile?.graduating_year ? String(profile.graduating_year) : '',
             });
-
-            setForm((current) => ({
-                ...current,
-                name: profile.name || '',
-                photo: profile.photo || '',
-                motto: profile.motto || '',
-                badge: profile.badge || '',
-                department_id: profile.department_id ? String(profile.department_id) : '',
-                graduating_year: profile.graduating_year ? String(profile.graduating_year) : '',
-            }));
-            setDepartments((currentDepartments) => currentDepartments.map((department) => {
-                if (String(department.id) !== String(profile.department_id)) {
-                    return department;
-                }
-
-                const nextGroupPhotos = Array.isArray(profile.department?.group_photos)
-                    ? profile.department.group_photos
-                    : [];
-
-                return {
-                    ...department,
-                    group_photos: nextGroupPhotos,
-                    group_photo: nextGroupPhotos[0] || profile.department?.group_photo || department.group_photo || '',
-                };
-            }));
+            setGroupPhotoItems(normalizeGroupPhotoItems(profile?.department));
             setSuccess('Profile updated successfully.');
         } catch (requestError) {
             setError(requestError.response?.data?.message || 'Unable to save profile.');
@@ -243,15 +303,6 @@ export default function StudentProfilePage() {
 
     const completion = completionPercent(form, Boolean(photoFile));
     const photoDisplay = photoPreview || form.photo || 'https://via.placeholder.com/320x320?text=Student';
-    const existingDepartmentGroupPhotos = Array.isArray(selectedDepartment?.group_photos)
-        ? selectedDepartment.group_photos
-        : selectedDepartment?.group_photo
-            ? [selectedDepartment.group_photo]
-            : [];
-    const departmentGroupPhotoDisplayList =
-        departmentGroupPhotoPreviews.length > 0
-            ? departmentGroupPhotoPreviews
-            : existingDepartmentGroupPhotos;
 
     return (
         <Card>
@@ -306,58 +357,89 @@ export default function StudentProfilePage() {
                         <Input id="badge" value={form.badge} onChange={handleInputChange('badge')} />
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="graduating_year">Graduating Year</Label>
-                        <select
-                            id="graduating_year"
-                            value={form.graduating_year}
-                            onChange={handleInputChange('graduating_year')}
-                            className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                            required
-                        >
-                            <option value="">Select year</option>
-                            {years.map((year) => (
-                                <option key={year} value={year}>
-                                    {year}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="class_motto">Class Motto</Label>
+                        <Textarea
+                            id="class_motto"
+                            value={form.class_motto}
+                            onChange={handleInputChange('class_motto')}
+                            rows={3}
+                            placeholder="Write the official class motto shown on the yearbook pages."
+                        />
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="department_id">Department</Label>
-                        <select
-                            id="department_id"
-                            value={form.department_id}
-                            onChange={handleInputChange('department_id')}
-                            className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-                            required
-                        >
-                            <option value="">Select department</option>
-                            {availableDepartments.map((department) => (
-                                <option key={department.id} value={department.id}>
-                                    {department.label} - {department.full_name}
-                                </option>
-                            ))}
-                        </select>
+                        <Label>Graduating Year</Label>
+                        <div className="flex h-10 w-full items-center rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-700">
+                            {form.graduating_year || '-'}
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Department</Label>
+                        <div className="flex h-10 w-full items-center rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-700">
+                            {form.department_label || '-'}
+                        </div>
+                        {form.department_full_name ? (
+                            <p className="text-xs text-slate-500">{form.department_full_name}</p>
+                        ) : null}
                     </div>
 
                     <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="department_group_photo_upload">Department Group Photo</Label>
                         <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            {departmentGroupPhotoDisplayList.length > 0 ? (
-                                <div className="flex gap-2 overflow-x-auto pb-1">
-                                    {departmentGroupPhotoDisplayList.map((photo, index) => (
-                                        <img
-                                            key={`${photo}-${index}`}
-                                            src={photo}
-                                            alt={`Department group preview ${index + 1}`}
-                                            className="h-36 w-52 shrink-0 rounded-lg object-cover ring-1 ring-slate-200 sm:h-44 sm:w-64"
-                                            onError={(event) => {
-                                                event.currentTarget.onerror = null;
-                                                event.currentTarget.src = 'https://via.placeholder.com/640x360?text=Department+Group+Photo';
-                                            }}
-                                        />
+                            {groupPhotoItems.length > 0 ? (
+                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    {groupPhotoItems.map((photoItem, index) => (
+                                        <div key={`${photoItem.id || photoItem.photo}-${index}`} className="space-y-2">
+                                            <div className="relative overflow-hidden rounded-lg ring-1 ring-slate-200">
+                                                <img
+                                                    src={photoItem.photo}
+                                                    alt={`Department group photo ${index + 1}`}
+                                                    className="h-36 w-full object-cover sm:h-40"
+                                                    onError={(event) => {
+                                                        event.currentTarget.onerror = null;
+                                                        event.currentTarget.src = 'https://via.placeholder.com/640x360?text=Department+Group+Photo';
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemovePhoto(photoItem)}
+                                                    disabled={groupPhotoBusy || !photoItem.id}
+                                                    className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black disabled:opacity-50"
+                                                    aria-label={`Remove group photo ${index + 1}`}
+                                                    title="Remove photo"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-xs text-slate-500">#{index + 1}</span>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleReorderPhoto(index, -1)}
+                                                        disabled={groupPhotoBusy || index === 0 || !photoItem.id}
+                                                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 disabled:opacity-50"
+                                                        aria-label={`Move photo ${index + 1} left`}
+                                                        title="Move earlier"
+                                                    >
+                                                        <ArrowLeft className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleReorderPhoto(index, 1)}
+                                                        disabled={groupPhotoBusy || index === groupPhotoItems.length - 1 || !photoItem.id}
+                                                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 disabled:opacity-50"
+                                                        aria-label={`Move photo ${index + 1} right`}
+                                                        title="Move later"
+                                                    >
+                                                        <ArrowRight className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             ) : (
@@ -365,18 +447,28 @@ export default function StudentProfilePage() {
                                     No department group photo uploaded yet.
                                 </div>
                             )}
+
                             <div className="min-w-0 flex-1 space-y-2">
                                 <Input
                                     id="department_group_photo_upload"
                                     type="file"
                                     accept="image/*"
                                     multiple
-                                    onChange={handleDepartmentGroupPhotoFileChange}
-                                    className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+                                    onChange={handleGroupPhotoUpload}
+                                    disabled={groupPhotoBusy}
+                                    className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white disabled:cursor-not-allowed"
                                 />
                                 <p className="text-xs text-slate-500">
-                                    Upload one or more JPG/PNG/WebP files (up to 4MB each) for your selected department.
+                                    New uploads are appended automatically. Reorder with arrows. Remove only using the X button on each image.
                                 </p>
+                                {groupPhotoBusy ? (
+                                    <p className="inline-flex items-center gap-2 text-xs text-slate-600">
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        Updating department photos...
+                                    </p>
+                                ) : null}
+                                {groupPhotoError ? <p className="text-xs text-red-600">{groupPhotoError}</p> : null}
+                                {groupPhotoMessage ? <p className="text-xs text-emerald-600">{groupPhotoMessage}</p> : null}
                             </div>
                         </div>
                     </div>

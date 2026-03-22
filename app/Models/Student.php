@@ -12,6 +12,7 @@ class Student extends Model
 
     protected $fillable = [
         'user_id',
+        'registration_link_id',
         'department_id',
         'yearbook_id',
         'name',
@@ -33,6 +34,11 @@ class Student extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function registrationLink(): BelongsTo
+    {
+        return $this->belongsTo(RegistrationLink::class);
     }
 
     public function yearbook(): BelongsTo

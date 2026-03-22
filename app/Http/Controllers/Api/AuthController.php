@@ -29,6 +29,16 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user()->load('student');
 
+        if (! $user->isActive()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'message' => 'This account has been deactivated. Please contact the administrator.',
+            ], 403);
+        }
+
         return response()->json([
             'user' => $this->userPayload($user),
         ]);
@@ -51,6 +61,16 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user()->load('student');
 
+        if (! $user->isActive()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'message' => 'This account is no longer active.',
+            ], 401);
+        }
+
         return response()->json([
             'user' => $this->userPayload($user),
         ]);
@@ -63,6 +83,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'is_active' => $user->isActive(),
             'is_profile_completed' => (bool) $user->student?->is_profile_completed,
         ];
     }

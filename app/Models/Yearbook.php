@@ -26,4 +26,9 @@ class Yearbook extends Model
     {
         return $this->hasMany(Student::class);
     }
+
+    public function registrationLinks(): HasMany
+    {
+        return $this->hasMany(RegistrationLink::class);
+    }
 }

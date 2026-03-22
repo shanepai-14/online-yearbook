@@ -21,6 +21,10 @@ class RoleMiddleware
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
+        if (method_exists($user, 'isActive') && ! $user->isActive()) {
+            return response()->json(['message' => 'Your account is deactivated.'], 403);
+        }
+
         if ($roles !== [] && ! in_array($user->role, $roles, true)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }

@@ -8,6 +8,7 @@ use App\Models\Reaction;
 use App\Models\SchoolSetting;
 use App\Models\Yearbook;
 use App\Support\DepartmentGroupPhotoMedia;
+use App\Support\FacultyPhotoMedia;
 use App\Support\StudentPhotoMedia;
 use App\Support\VisitorFingerprint;
 use Illuminate\Http\JsonResponse;
@@ -156,7 +157,7 @@ class YearbookController extends Controller
                 'id' => $member['id'],
                 'name' => $member['name'],
                 'role' => $member['role'],
-                'photo' => $member['photo'],
+                'photo' => FacultyPhotoMedia::normalizePublicUrl($member['photo']),
                 'department_id' => $member['department_id'],
                 'reaction_count' => (int) ($facultyReactionCounts[$member['id']] ?? 0),
                 'reacted_by_viewer' => isset($facultyReactedLookup[$member['id']]),

@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { yearbookPalette as palette } from '@/lib/theme';
 
 const sansStyle = { fontFamily: "'Helvetica Neue', sans-serif" };
-const DEPARTMENT_PLACEHOLDER = 'https://via.placeholder.com/600x400?text=Department';
 
 const DVCLogo = () => (
     <svg viewBox="0 0 100 100" className="h-full w-full">
@@ -17,28 +16,21 @@ const DVCLogo = () => (
     </svg>
 );
 
-function photoOrPlaceholder(photo) {
-    if (typeof photo !== 'string') {
-        return DEPARTMENT_PLACEHOLDER;
+function DeptPreview({ dept }) {
+    const [isHidden, setIsHidden] = useState(false);
+
+    if (isHidden) {
+        return null;
     }
 
-    const trimmed = photo.trim();
-
-    return trimmed !== '' ? trimmed : DEPARTMENT_PLACEHOLDER;
-}
-
-function DeptPreview({ dept }) {
     return (
-        <div className="group relative min-w-0 flex-1 overflow-hidden">
+        <div className="group relative min-w-0 flex-1 overflow-hidden" style={{ background: '#eef1f8' }}>
             <img
-                src={photoOrPlaceholder(dept.photo)}
+                src={dept.photo}
                 alt={dept.label}
                 className="h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
                 style={{ filter: 'grayscale(25%) brightness(0.75)' }}
-                onError={(event) => {
-                    event.currentTarget.onerror = null;
-                    event.currentTarget.src = DEPARTMENT_PLACEHOLDER;
-                }}
+                onError={() => setIsHidden(true)}
             />
             <div
                 className="absolute inset-0 flex flex-col justify-end p-3"
@@ -61,6 +53,9 @@ function DeptPreview({ dept }) {
 function YearCard({ data, isLatest, onClick }) {
     const [hovered, setHovered] = useState(false);
     const departments = Array.isArray(data?.departments) ? data.departments : [];
+    const departmentsWithPhotos = departments.filter(
+        (department) => typeof department?.photo === 'string' && department.photo.trim() !== '',
+    );
 
     return (
         <button
@@ -106,11 +101,13 @@ function YearCard({ data, isLatest, onClick }) {
                 </div>
             </div>
 
-            <div className="flex" style={{ height: '160px' }}>
-                {departments.map((dept) => (
-                    <DeptPreview key={dept.id} dept={dept} />
-                ))}
-            </div>
+            {departmentsWithPhotos.length > 0 ? (
+                <div className="flex" style={{ height: '160px' }}>
+                    {departmentsWithPhotos.map((dept) => (
+                        <DeptPreview key={dept.id} dept={dept} />
+                    ))}
+                </div>
+            ) : null}
 
             <div className="border-t px-5 py-4" style={{ borderColor: '#f0f1f5' }}>
                 <div
@@ -321,7 +318,7 @@ export default function HomePage() {
             </section>
 
             <footer
-                className="mt-6 flex items-center justify-between border-t-2 px-6 py-5 sm:px-10"
+                className="mt-11 flex items-center justify-between border-t-2 px-6 py-7 sm:px-10"
                 style={{ background: palette.navy, borderColor: palette.goldDark }}
             >
                 <div

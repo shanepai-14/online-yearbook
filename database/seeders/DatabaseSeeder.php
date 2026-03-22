@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\DepartmentGroupPhoto;
 use App\Models\Faculty;
 use App\Models\Reaction;
+use App\Models\RegistrationLink;
 use App\Models\SchoolSetting;
 use App\Models\Student;
 use App\Models\User;
@@ -24,6 +25,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         Student::query()->delete();
+        RegistrationLink::query()->delete();
         Faculty::query()->delete();
         DepartmentGroupPhoto::query()->delete();
         Department::query()->delete();
@@ -45,6 +47,13 @@ class DatabaseSeeder extends Seeder
             'academic_year_text' => 'Academic Year 2024 - 2025',
             'hero_title' => 'Celebrating the Class of 2025',
             'hero_description' => 'A milestone year of growth, resilience, and shared achievement.',
+        ]);
+
+        $yearbook2024 = Yearbook::query()->create([
+            'graduating_year' => 2024,
+            'academic_year_text' => 'Academic Year 2023 - 2024',
+            'hero_title' => 'Celebrating the Class of 2024',
+            'hero_description' => 'Building bridges, creating futures.',
         ]);
 
         $cs = Department::query()->create([
@@ -69,6 +78,25 @@ class DatabaseSeeder extends Seeder
             'full_name' => 'Bachelor of Elementary Education',
             'description' => 'Prepared future educators for learner-centered and inclusive classrooms.',
             'group_photo' => 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=80',
+        ]);
+
+        Department::query()->create([
+            'yearbook_id' => $yearbook2024->id,
+            'label' => 'BSCS',
+            'full_name' => 'Bachelor of Science in Computer Science',
+            'description' => 'Focused on software engineering, systems, and intelligent applications.',
+        ]);
+        Department::query()->create([
+            'yearbook_id' => $yearbook2024->id,
+            'label' => 'BSBA',
+            'full_name' => 'Bachelor of Science in Business Administration',
+            'description' => 'Built around strategic thinking, leadership, and entrepreneurship.',
+        ]);
+        Department::query()->create([
+            'yearbook_id' => $yearbook2024->id,
+            'label' => 'BEED',
+            'full_name' => 'Bachelor of Elementary Education',
+            'description' => 'Prepared future educators for learner-centered and inclusive classrooms.',
         ]);
 
         DepartmentGroupPhoto::query()->create([
@@ -111,12 +139,65 @@ class DatabaseSeeder extends Seeder
             'photo' => 'https://images.unsplash.com/photo-1551836022-4c4c79ecde51?auto=format&fit=crop&w=300&q=80',
         ]);
 
-        User::query()->create([
+        $adminUser = User::query()->create([
             'name' => 'Admin User',
             'email' => 'admin@yearbook.test',
             'password' => 'password123',
             'role' => User::ROLE_ADMIN,
+            'is_active' => true,
             'email_verified_at' => now(),
+        ]);
+
+        RegistrationLink::query()->create([
+            'title' => 'Open Registration (All Years and Departments)',
+            'token' => 'free-all-years-and-departments',
+            'type' => RegistrationLink::TYPE_FREE_YEAR_FREE_DEPARTMENT,
+            'yearbook_id' => null,
+            'department_id' => null,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(60),
+            'is_active' => true,
+            'description' => 'Students can choose both department and graduating year.',
+            'created_by' => $adminUser?->id,
+        ]);
+
+        RegistrationLink::query()->create([
+            'title' => 'Class of 2025 Registration',
+            'token' => 'fixed-2025-select-department',
+            'type' => RegistrationLink::TYPE_FIXED_YEAR_SELECT_DEPARTMENT,
+            'yearbook_id' => $yearbook2025->id,
+            'department_id' => null,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(45),
+            'is_active' => true,
+            'description' => 'Year is fixed to 2025 while department remains selectable.',
+            'created_by' => $adminUser?->id,
+        ]);
+
+        RegistrationLink::query()->create([
+            'title' => 'BSCS Program Registration',
+            'token' => 'fixed-bscs-select-year',
+            'type' => RegistrationLink::TYPE_FIXED_DEPARTMENT_SELECT_YEAR,
+            'yearbook_id' => null,
+            'department_id' => $cs->id,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(45),
+            'is_active' => true,
+            'description' => 'Department is fixed to BSCS while year remains selectable.',
+            'created_by' => $adminUser?->id,
+        ]);
+
+        RegistrationLink::query()->create([
+            'title' => 'BSBA Class of 2025 Exclusive Registration',
+            'token' => 'fixed-bsba-2025',
+            'type' => RegistrationLink::TYPE_FIXED_YEAR_FIXED_DEPARTMENT,
+            'yearbook_id' => $yearbook2025->id,
+            'department_id' => $bsba->id,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(30),
+            'is_active' => true,
+            'description' => 'Both year and department are pre-assigned by link.',
+            'created_by' => $adminUser?->id,
         ]);
 
         $studentUser = User::query()->create([
@@ -124,6 +205,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'student@yearbook.test',
             'password' => 'password123',
             'role' => User::ROLE_STUDENT,
+            'is_active' => true,
             'email_verified_at' => now(),
         ]);
 

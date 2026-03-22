@@ -38,4 +38,9 @@ class Department extends Model
     {
         return $this->hasMany(DepartmentGroupPhoto::class)->orderBy('sort_order')->orderBy('id');
     }
+
+    public function registrationLinks(): HasMany
+    {
+        return $this->hasMany(RegistrationLink::class);
+    }
 }
