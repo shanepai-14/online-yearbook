@@ -9,6 +9,7 @@ import AdminRegistrationLinksPage from '@/pages/AdminRegistrationLinksPage';
 import AdminStudentsPage from '@/pages/AdminStudentsPage';
 import AdminYearbooksPage from '@/pages/AdminYearbooksPage';
 import GraduatesYearPage from '@/pages/GraduatesYearPage';
+import GuestCardMakerPage from '@/pages/GuestCardMakerPage';
 import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import NotFoundPage from '@/pages/NotFoundPage';
@@ -24,6 +25,7 @@ export function AppRouter() {
             <Routes>
                 <Route element={<MainLayout />}>
                     <Route path="/" element={<HomePage />} />
+                    <Route path="/fun-card" element={<GuestCardMakerPage />} />
                     <Route path="/graduates/:year" element={<GraduatesYearPage />} />
                     <Route path="/register/:token" element={<RegisterByLinkPage />} />
 

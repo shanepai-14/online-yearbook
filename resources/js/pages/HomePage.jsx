@@ -222,19 +222,34 @@ export default function HomePage() {
                         {schoolName} · Yearbook
                     </span>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => navigate('/login')}
-                    className="border px-3 py-1 text-xs uppercase tracking-[0.15em] transition-colors"
-                    style={{
-                        ...sansStyle,
-                        borderColor: 'rgba(232,217,138,0.35)',
-                        color: 'rgba(232,217,138,0.92)',
-                        background: 'rgba(255,255,255,0.05)',
-                    }}
-                >
-                    Login
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => navigate('/fun-card')}
+                        className="border px-3 py-1 text-xs uppercase tracking-[0.15em] transition-colors"
+                        style={{
+                            ...sansStyle,
+                            borderColor: 'rgba(232,217,138,0.35)',
+                            color: 'rgba(232,217,138,0.92)',
+                            background: 'rgba(255,255,255,0.05)',
+                        }}
+                    >
+                        Fun Card
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/login')}
+                        className="border px-3 py-1 text-xs uppercase tracking-[0.15em] transition-colors"
+                        style={{
+                            ...sansStyle,
+                            borderColor: 'rgba(232,217,138,0.35)',
+                            color: 'rgba(232,217,138,0.92)',
+                            background: 'rgba(255,255,255,0.05)',
+                        }}
+                    >
+                        Login
+                    </button>
+                </div>
             </nav>
 
             <section
