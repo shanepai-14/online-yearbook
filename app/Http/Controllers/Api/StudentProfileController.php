@@ -31,7 +31,8 @@ class StudentProfileController extends Controller
         }
 
         $profile->load([
-            'department:id,label,full_name,yearbook_id,group_photo',
+            'department:id,department_template_id,yearbook_id,group_photo',
+            'department.template:id,label,full_name,description',
             'department.groupPhotos:id,department_id,photo,sort_order',
             'yearbook:id,graduating_year,hero_description',
         ]);
@@ -44,9 +45,13 @@ class StudentProfileController extends Controller
                     ->pluck('graduating_year')
                     ->values(),
                 'departments' => Department::query()
-                    ->with(['yearbook:id,graduating_year', 'groupPhotos:id,department_id,photo,sort_order'])
-                    ->orderBy('label')
-                    ->get()
+                    ->with([
+                        'template:id,label,full_name,description',
+                        'yearbook:id,graduating_year',
+                        'groupPhotos:id,department_id,photo,sort_order',
+                    ])
+                    ->get(['id', 'department_template_id', 'yearbook_id', 'group_photo'])
+                    ->sortBy(fn (Department $department) => strtoupper((string) ($department->label ?? '')))
                     ->map(function (Department $department): array {
                         $groupPhotos = $this->departmentGroupPhotos($department);
                         $groupPhotoItems = $this->departmentGroupPhotoItems($department);
@@ -88,7 +93,8 @@ class StudentProfileController extends Controller
         }
 
         $profile->loadMissing([
-            'department:id,label,full_name,yearbook_id,group_photo',
+            'department:id,department_template_id,yearbook_id,group_photo',
+            'department.template:id,label,full_name,description',
             'department.groupPhotos:id,department_id,photo,sort_order',
             'yearbook:id,graduating_year,hero_description',
         ]);
@@ -117,7 +123,8 @@ class StudentProfileController extends Controller
         $profile->save();
 
         $profile->load([
-            'department:id,label,full_name,yearbook_id,group_photo',
+            'department:id,department_template_id,yearbook_id,group_photo',
+            'department.template:id,label,full_name,description',
             'department.groupPhotos:id,department_id,photo,sort_order',
             'yearbook:id,graduating_year,hero_description',
         ]);
@@ -145,7 +152,8 @@ class StudentProfileController extends Controller
         }
 
         $profile->loadMissing([
-            'department:id,label,full_name,yearbook_id,group_photo',
+            'department:id,department_template_id,yearbook_id,group_photo',
+            'department.template:id,label,full_name,description',
             'department.groupPhotos:id,department_id,photo,sort_order',
         ]);
 
@@ -189,7 +197,8 @@ class StudentProfileController extends Controller
         }
 
         $profile->loadMissing([
-            'department:id,label,full_name,yearbook_id,group_photo',
+            'department:id,department_template_id,yearbook_id,group_photo',
+            'department.template:id,label,full_name,description',
             'department.groupPhotos:id,department_id,photo,sort_order',
         ]);
 
@@ -249,7 +258,8 @@ class StudentProfileController extends Controller
         }
 
         $profile->loadMissing([
-            'department:id,label,full_name,yearbook_id,group_photo',
+            'department:id,department_template_id,yearbook_id,group_photo',
+            'department.template:id,label,full_name,description',
             'department.groupPhotos:id,department_id,photo,sort_order',
         ]);
 
@@ -502,6 +512,8 @@ class StudentProfileController extends Controller
 
     private function departmentPayload(Department $department): array
     {
+        $department->loadMissing('template:id,label,full_name,description');
+
         $groupPhotoItems = $this->departmentGroupPhotoItems($department);
         $groupPhotos = collect($groupPhotoItems)->pluck('photo')->values()->all();
 

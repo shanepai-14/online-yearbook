@@ -5,6 +5,7 @@ import {
     BookOpenText,
     ChevronDown,
     ChevronUp,
+    Eye,
     GraduationCap,
     Loader2,
     Plus,
@@ -32,16 +33,92 @@ const EMPTY_YEARBOOK_FORM = {
 };
 
 const EMPTY_DEPARTMENT_FORM = {
+    department_template_id: '',
+};
+
+const EMPTY_FACULTY_FORM = {
+    name: '',
+    faculty_role_id: '',
+    photo_upload: null,
+};
+
+const EMPTY_DEPARTMENT_TEMPLATE_FORM = {
     label: '',
     full_name: '',
     description: '',
 };
 
-const EMPTY_FACULTY_FORM = {
+const EMPTY_FACULTY_ROLE_FORM = {
     name: '',
-    role: '',
-    photo_upload: null,
 };
+
+const FACULTY_PLACEHOLDER = 'https://via.placeholder.com/300x300?text=Faculty';
+
+const facultyUploadInputClassName =
+    'cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white';
+
+function photoOrPlaceholder(photo, placeholder = FACULTY_PLACEHOLDER) {
+    if (typeof photo !== 'string') {
+        return placeholder;
+    }
+
+    const trimmed = photo.trim();
+
+    return trimmed !== '' ? trimmed : placeholder;
+}
+
+function FacultyPreviewCard({ name, role, photo, photoFile = null }) {
+    const [localPreviewUrl, setLocalPreviewUrl] = useState('');
+
+    useEffect(() => {
+        if (!(photoFile instanceof File)) {
+            setLocalPreviewUrl('');
+            return;
+        }
+
+        const nextUrl = URL.createObjectURL(photoFile);
+        setLocalPreviewUrl(nextUrl);
+
+        return () => {
+            URL.revokeObjectURL(nextUrl);
+        };
+    }, [photoFile]);
+
+    const displayPhoto = localPreviewUrl || photoOrPlaceholder(photo, FACULTY_PLACEHOLDER);
+
+    return (
+        <div
+            className="group w-full overflow-hidden border bg-white shadow-sm"
+            style={{ borderColor: palette.cardBorder }}
+        >
+            <div className="relative w-full overflow-hidden bg-gray-100" style={{ aspectRatio: '1 / 1' }}>
+                <img
+                    src={displayPhoto}
+                    alt={name || 'Faculty preview'}
+                    className="h-full w-full object-cover grayscale-[20%] transition-all duration-300 group-hover:grayscale-0"
+                    onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = FACULTY_PLACEHOLDER;
+                    }}
+                />
+            </div>
+            <div className="border-t-2 px-3 py-3" style={{ borderColor: palette.navy }}>
+                <p className="mb-1 text-sm text-slate-900" style={{ color: palette.navy }}>
+                    {name?.trim() || 'Faculty Name'}
+                </p>
+                <p
+                    className="text-xs uppercase tracking-[0.08em]"
+                    style={{
+                        fontFamily: "'Helvetica Neue', sans-serif",
+                        color: palette.red,
+                    }}
+                >
+                    {role?.trim() || 'Role'}
+                </p>
+            </div>
+        </div>
+    );
+}
 
 function MetricCard({ label, value, icon: Icon, accent }) {
     return (
@@ -71,16 +148,14 @@ function toYearbookDraft(yearbook) {
 
 function toDepartmentDraft(department) {
     return {
-        label: department.label ?? '',
-        full_name: department.full_name ?? '',
-        description: department.description ?? '',
+        department_template_id: department.department_template_id ? String(department.department_template_id) : '',
     };
 }
 
 function toFacultyDraft(faculty) {
     return {
         name: faculty.name ?? '',
-        role: faculty.role ?? '',
+        faculty_role_id: faculty.faculty_role_id ? String(faculty.faculty_role_id) : '',
         photo_upload: null,
     };
 }
@@ -132,18 +207,27 @@ function firstApiError(error, fallbackMessage) {
 
 export default function AdminYearbooksPage() {
     const [yearbooks, setYearbooks] = useState([]);
+    const [departmentTemplates, setDepartmentTemplates] = useState([]);
+    const [facultyRoles, setFacultyRoles] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
     const [busyKey, setBusyKey] = useState('');
 
     const [createYearbookOpen, setCreateYearbookOpen] = useState(false);
+    const [departmentOptionsOpen, setDepartmentOptionsOpen] = useState(false);
+    const [facultyRolesOpen, setFacultyRolesOpen] = useState(false);
     const [newYearbook, setNewYearbook] = useState(EMPTY_YEARBOOK_FORM);
     const [yearbookDrafts, setYearbookDrafts] = useState({});
     const [newDepartmentDrafts, setNewDepartmentDrafts] = useState({});
     const [departmentDrafts, setDepartmentDrafts] = useState({});
     const [newFacultyDrafts, setNewFacultyDrafts] = useState({});
     const [facultyDrafts, setFacultyDrafts] = useState({});
+    const [newDepartmentTemplate, setNewDepartmentTemplate] = useState({ ...EMPTY_DEPARTMENT_TEMPLATE_FORM });
+    const [departmentTemplateDrafts, setDepartmentTemplateDrafts] = useState({});
+    const [newFacultyRole, setNewFacultyRole] = useState({ ...EMPTY_FACULTY_ROLE_FORM });
+    const [facultyRoleDrafts, setFacultyRoleDrafts] = useState({});
 
     const [activeYearbookId, setActiveYearbookId] = useState(null);
     const [activeDepartmentId, setActiveDepartmentId] = useState(null);
@@ -212,6 +296,32 @@ export default function AdminYearbooksPage() {
         });
     }, []);
 
+    const hydrateReferenceDrafts = useCallback((nextDepartmentTemplates, nextFacultyRoles) => {
+        setDepartmentTemplateDrafts(() => {
+            const drafts = {};
+
+            nextDepartmentTemplates.forEach((template) => {
+                drafts[template.id] = {
+                    label: template.label ?? '',
+                    full_name: template.full_name ?? '',
+                    description: template.description ?? '',
+                };
+            });
+
+            return drafts;
+        });
+
+        setFacultyRoleDrafts(() => {
+            const drafts = {};
+
+            nextFacultyRoles.forEach((role) => {
+                drafts[role.id] = { name: role.name ?? '' };
+            });
+
+            return drafts;
+        });
+    }, []);
+
     const loadYearbooks = useCallback(
         async ({ silent = false } = {}) => {
             if (!silent) {
@@ -219,10 +329,20 @@ export default function AdminYearbooksPage() {
             }
 
             try {
-                const response = await axios.get('/api/admin/yearbooks');
-                const nextYearbooks = response.data.yearbooks ?? [];
+                const [yearbooksResponse, referenceDataResponse] = await Promise.all([
+                    axios.get('/api/admin/yearbooks'),
+                    axios.get('/api/admin/reference-data'),
+                ]);
+
+                const nextYearbooks = yearbooksResponse.data.yearbooks ?? [];
+                const nextDepartmentTemplates = referenceDataResponse.data.department_templates ?? [];
+                const nextFacultyRoles = referenceDataResponse.data.faculty_roles ?? [];
+
                 setYearbooks(nextYearbooks);
+                setDepartmentTemplates(nextDepartmentTemplates);
+                setFacultyRoles(nextFacultyRoles);
                 hydrateDrafts(nextYearbooks);
+                hydrateReferenceDrafts(nextDepartmentTemplates, nextFacultyRoles);
 
                 setActiveYearbookId((current) => {
                     if (!current) {
@@ -239,7 +359,7 @@ export default function AdminYearbooksPage() {
                 }
             }
         },
-        [hydrateDrafts],
+        [hydrateDrafts, hydrateReferenceDrafts],
     );
 
     useEffect(() => {
@@ -250,6 +370,26 @@ export default function AdminYearbooksPage() {
         () => yearbooks.find((yearbook) => yearbook.id === activeYearbookId) || null,
         [activeYearbookId, yearbooks],
     );
+
+    const departmentTemplateById = useMemo(() => {
+        const lookup = {};
+
+        departmentTemplates.forEach((template) => {
+            lookup[String(template.id)] = template;
+        });
+
+        return lookup;
+    }, [departmentTemplates]);
+
+    const facultyRoleById = useMemo(() => {
+        const lookup = {};
+
+        facultyRoles.forEach((role) => {
+            lookup[String(role.id)] = role;
+        });
+
+        return lookup;
+    }, [facultyRoles]);
 
     useEffect(() => {
         if (!selectedYearbook) {
@@ -340,6 +480,26 @@ export default function AdminYearbooksPage() {
         }));
     };
 
+    const updateDepartmentTemplateDraftField = (templateId, field, value) => {
+        setDepartmentTemplateDrafts((current) => ({
+            ...current,
+            [templateId]: {
+                ...(current[templateId] || { ...EMPTY_DEPARTMENT_TEMPLATE_FORM }),
+                [field]: value,
+            },
+        }));
+    };
+
+    const updateFacultyRoleDraftField = (roleId, value) => {
+        setFacultyRoleDrafts((current) => ({
+            ...current,
+            [roleId]: {
+                ...(current[roleId] || { ...EMPTY_FACULTY_ROLE_FORM }),
+                name: value,
+            },
+        }));
+    };
+
     const handleCreateYearbook = async (event) => {
         event.preventDefault();
 
@@ -409,9 +569,7 @@ export default function AdminYearbooksPage() {
         const draft = newDepartmentDrafts[yearbookId] || { ...EMPTY_DEPARTMENT_FORM };
 
         const payload = {
-            label: draft.label.trim(),
-            full_name: draft.full_name.trim(),
-            description: draft.description.trim(),
+            department_template_id: Number(draft.department_template_id),
         };
 
         const success = await runMutation(
@@ -437,9 +595,7 @@ export default function AdminYearbooksPage() {
         }
 
         const payload = {
-            label: draft.label.trim(),
-            full_name: draft.full_name.trim(),
-            description: draft.description.trim(),
+            department_template_id: Number(draft.department_template_id),
         };
 
         await runMutation(
@@ -538,7 +694,7 @@ export default function AdminYearbooksPage() {
 
         const payload = new FormData();
         payload.append('name', draft.name.trim());
-        payload.append('role', draft.role.trim());
+        payload.append('faculty_role_id', String(draft.faculty_role_id || ''));
 
         if (draft.photo_upload) {
             payload.append('photo_upload', draft.photo_upload);
@@ -569,7 +725,7 @@ export default function AdminYearbooksPage() {
         const payload = new FormData();
         payload.append('_method', 'PUT');
         payload.append('name', draft.name.trim());
-        payload.append('role', draft.role.trim());
+        payload.append('faculty_role_id', String(draft.faculty_role_id || ''));
 
         if (draft.photo_upload) {
             payload.append('photo_upload', draft.photo_upload);
@@ -598,6 +754,111 @@ export default function AdminYearbooksPage() {
         );
     };
 
+    const handleCreateDepartmentTemplate = async () => {
+        const payload = {
+            label: newDepartmentTemplate.label.trim(),
+            full_name: newDepartmentTemplate.full_name.trim(),
+            description: newDepartmentTemplate.description.trim(),
+        };
+
+        const success = await runMutation(
+            'create-department-template',
+            () => axios.post('/api/admin/reference-data/department-templates', payload),
+            'Department option created successfully.',
+            'Unable to create department option.',
+        );
+
+        if (success) {
+            setNewDepartmentTemplate({ ...EMPTY_DEPARTMENT_TEMPLATE_FORM });
+        }
+    };
+
+    const handleUpdateDepartmentTemplate = async (templateId) => {
+        const draft = departmentTemplateDrafts[templateId];
+
+        if (!draft) {
+            return;
+        }
+
+        const payload = {
+            label: draft.label.trim(),
+            full_name: draft.full_name.trim(),
+            description: draft.description.trim(),
+        };
+
+        await runMutation(
+            `update-department-template-${templateId}`,
+            () => axios.put(`/api/admin/reference-data/department-templates/${templateId}`, payload),
+            'Department option updated successfully.',
+            'Unable to update department option.',
+        );
+    };
+
+    const handleDeleteDepartmentTemplate = async (templateId) => {
+        const allowed = window.confirm('Delete this department option?');
+
+        if (!allowed) {
+            return;
+        }
+
+        await runMutation(
+            `delete-department-template-${templateId}`,
+            () => axios.delete(`/api/admin/reference-data/department-templates/${templateId}`),
+            'Department option deleted successfully.',
+            'Unable to delete department option.',
+        );
+    };
+
+    const handleCreateFacultyRole = async () => {
+        const payload = {
+            name: newFacultyRole.name.trim(),
+        };
+
+        const success = await runMutation(
+            'create-faculty-role',
+            () => axios.post('/api/admin/reference-data/faculty-roles', payload),
+            'Faculty role created successfully.',
+            'Unable to create faculty role.',
+        );
+
+        if (success) {
+            setNewFacultyRole({ ...EMPTY_FACULTY_ROLE_FORM });
+        }
+    };
+
+    const handleUpdateFacultyRole = async (roleId) => {
+        const draft = facultyRoleDrafts[roleId];
+
+        if (!draft) {
+            return;
+        }
+
+        await runMutation(
+            `update-faculty-role-${roleId}`,
+            () =>
+                axios.put(`/api/admin/reference-data/faculty-roles/${roleId}`, {
+                    name: draft.name.trim(),
+                }),
+            'Faculty role updated successfully.',
+            'Unable to update faculty role.',
+        );
+    };
+
+    const handleDeleteFacultyRole = async (roleId) => {
+        const allowed = window.confirm('Delete this faculty role?');
+
+        if (!allowed) {
+            return;
+        }
+
+        await runMutation(
+            `delete-faculty-role-${roleId}`,
+            () => axios.delete(`/api/admin/reference-data/faculty-roles/${roleId}`),
+            'Faculty role deleted successfully.',
+            'Unable to delete faculty role.',
+        );
+    };
+
     if (loading) {
         return <p className="text-sm text-slate-500">Loading yearbook management...</p>;
     }
@@ -619,10 +880,32 @@ export default function AdminYearbooksPage() {
                         </p>
                     </div>
 
-                    <Button type="button" onClick={() => setCreateYearbookOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Yearbook
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="h-10 w-10 p-0"
+                            title="Department Options"
+                            aria-label="Open Department Options"
+                            onClick={() => setDepartmentOptionsOpen(true)}
+                        >
+                            <School className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="h-10 w-10 p-0"
+                            title="Faculty Roles"
+                            aria-label="Open Faculty Roles"
+                            onClick={() => setFacultyRolesOpen(true)}
+                        >
+                            <Users className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" onClick={() => setCreateYearbookOpen(true)}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create Yearbook
+                        </Button>
+                    </div>
                 </div>
             </section>
 
@@ -667,6 +950,17 @@ export default function AdminYearbooksPage() {
                                         <TableCell>{yearbook.graduates_count}</TableCell>
                                         <TableCell>
                                             <div className="flex justify-end gap-2">
+                                                <Button type="button" variant="outline" size="icon" asChild>
+                                                    <a
+                                                        href={`/graduates/${yearbook.graduating_year}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        title={`Preview Class of ${yearbook.graduating_year}`}
+                                                        aria-label={`Preview Class of ${yearbook.graduating_year}`}
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </a>
+                                                </Button>
                                                 <Button
                                                     type="button"
                                                     variant={isSelected ? 'secondary' : 'outline'}
@@ -808,36 +1102,53 @@ export default function AdminYearbooksPage() {
                                 <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Create Department</p>
                                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label>Label</Label>
-                                        <Input
-                                            value={(newDepartmentDrafts[selectedYearbook.id] || { ...EMPTY_DEPARTMENT_FORM }).label}
-                                            onChange={(event) => updateNewDepartmentField(selectedYearbook.id, 'label', event.target.value)}
-                                            placeholder="BSCS"
-                                        />
+                                        <Label>Department Option</Label>
+                                        <select
+                                            value={(newDepartmentDrafts[selectedYearbook.id] || { ...EMPTY_DEPARTMENT_FORM }).department_template_id}
+                                            onChange={(event) =>
+                                                updateNewDepartmentField(selectedYearbook.id, 'department_template_id', event.target.value)
+                                            }
+                                            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                                        >
+                                            <option value="">Select department option</option>
+                                            {departmentTemplates.map((template) => (
+                                                <option key={template.id} value={template.id}>
+                                                    {template.label} - {template.full_name}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Full Name</Label>
-                                        <Input
-                                            value={(newDepartmentDrafts[selectedYearbook.id] || { ...EMPTY_DEPARTMENT_FORM }).full_name}
-                                            onChange={(event) => updateNewDepartmentField(selectedYearbook.id, 'full_name', event.target.value)}
-                                            placeholder="Bachelor of Science in Computer Science"
-                                        />
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label>Description</Label>
-                                        <Textarea
-                                            rows={2}
-                                            value={(newDepartmentDrafts[selectedYearbook.id] || { ...EMPTY_DEPARTMENT_FORM }).description}
-                                            onChange={(event) => updateNewDepartmentField(selectedYearbook.id, 'description', event.target.value)}
-                                            placeholder="Program description"
-                                        />
+                                        <Label>Selected Details</Label>
+                                        {(() => {
+                                            const templateId = (newDepartmentDrafts[selectedYearbook.id] || { ...EMPTY_DEPARTMENT_FORM }).department_template_id;
+                                            const template = departmentTemplateById[String(templateId)] || null;
+
+                                            return (
+                                                <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                                                    {template ? (
+                                                        <>
+                                                            <p className="font-semibold text-slate-900">
+                                                                {template.label} - {template.full_name}
+                                                            </p>
+                                                            <p className="mt-1 text-slate-500">{template.description}</p>
+                                                        </>
+                                                    ) : (
+                                                        <p>Choose a department option from the list.</p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                                 <Button
                                     type="button"
                                     className="mt-4"
                                     onClick={() => handleCreateDepartment(selectedYearbook.id)}
-                                    disabled={busyKey === `create-department-${selectedYearbook.id}`}
+                                    disabled={
+                                        busyKey === `create-department-${selectedYearbook.id}` ||
+                                        !String((newDepartmentDrafts[selectedYearbook.id] || { ...EMPTY_DEPARTMENT_FORM }).department_template_id || '')
+                                    }
                                 >
                                     <Plus className="mr-2 h-4 w-4" />
                                     {busyKey === `create-department-${selectedYearbook.id}` ? 'Creating...' : 'Add Department'}
@@ -852,6 +1163,12 @@ export default function AdminYearbooksPage() {
                                     const groupPhotoItems = normalizeDepartmentGroupPhotoItems(department);
                                     const isGroupPhotoBusy = busyKey.startsWith('department-photos-');
                                     const isGroupPhotoUploadBusy = busyKey === `department-photos-upload-${department.id}`;
+                                    const isCreateFacultyBusy = busyKey === `create-faculty-${department.id}`;
+                                    const selectedTemplate = departmentTemplateById[String(departmentDraft.department_template_id)] || null;
+                                    const canCreateFaculty =
+                                        newFacultyDraft.name.trim() !== '' &&
+                                        String(newFacultyDraft.faculty_role_id || '').trim() !== '' &&
+                                        newFacultyDraft.photo_upload instanceof File;
 
                                     return (
                                         <article key={department.id} className="rounded-xl border border-slate-200 p-4">
@@ -872,267 +1189,377 @@ export default function AdminYearbooksPage() {
                                                     {isActiveDepartment ? (
                                                         <>
                                                             <ChevronUp className="mr-2 h-4 w-4" />
-                                                            Hide Faculty
+                                                            Hide Department
                                                         </>
                                                     ) : (
                                                         <>
                                                             <ChevronDown className="mr-2 h-4 w-4" />
-                                                            Manage Faculty
+                                                            Show Department
                                                         </>
                                                     )}
                                                 </Button>
                                             </div>
 
-                                            <div className="mt-4 grid gap-3 md:grid-cols-2">
-                                                <div className="space-y-2">
-                                                    <Label>Label</Label>
-                                                    <Input
-                                                        value={departmentDraft.label}
-                                                        onChange={(event) => updateDepartmentDraftField(department.id, 'label', event.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Full Name</Label>
-                                                    <Input
-                                                        value={departmentDraft.full_name}
-                                                        onChange={(event) => updateDepartmentDraftField(department.id, 'full_name', event.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2 md:col-span-2">
-                                                    <Label>Description</Label>
-                                                    <Textarea
-                                                        rows={2}
-                                                        value={departmentDraft.description}
-                                                        onChange={(event) => updateDepartmentDraftField(department.id, 'description', event.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-4 flex items-center gap-2">
-                                                <Button
-                                                    type="button"
-                                                    onClick={() => handleUpdateDepartment(selectedYearbook.id, department.id)}
-                                                    disabled={busyKey === `update-department-${department.id}`}
-                                                >
-                                                    <Save className="mr-2 h-4 w-4" />
-                                                    {busyKey === `update-department-${department.id}` ? 'Saving...' : 'Save Department'}
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="destructive"
-                                                    onClick={() => handleDeleteDepartment(selectedYearbook.id, department.id)}
-                                                    disabled={busyKey === `delete-department-${department.id}`}
-                                                >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    {busyKey === `delete-department-${department.id}` ? 'Deleting...' : 'Delete'}
-                                                </Button>
-                                            </div>
-
-                                            <div className="mt-4 space-y-2">
-                                                <Label htmlFor={`department_group_photo_upload_${department.id}`}>Department Group Photos</Label>
-                                                <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                                                    {groupPhotoItems.length > 0 ? (
-                                                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                                            {groupPhotoItems.map((photoItem, index) => (
-                                                                <div key={`${photoItem.id || photoItem.photo}-${index}`} className="space-y-2">
-                                                                    <div className="relative overflow-hidden rounded-lg ring-1 ring-slate-200">
-                                                                        <img
-                                                                            src={photoItem.photo}
-                                                                            alt={`Department group photo ${index + 1}`}
-                                                                            className="h-36 w-full object-cover sm:h-40"
-                                                                            onError={(event) => {
-                                                                                event.currentTarget.onerror = null;
-                                                                                event.currentTarget.src =
-                                                                                    'https://via.placeholder.com/640x360?text=Department+Group+Photo';
-                                                                            }}
-                                                                        />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleDepartmentGroupPhotoDelete(department, photoItem)}
-                                                                            disabled={isGroupPhotoBusy || !photoItem.id}
-                                                                            className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black disabled:opacity-50"
-                                                                            aria-label={`Remove group photo ${index + 1}`}
-                                                                            title="Remove photo"
-                                                                        >
-                                                                            <X className="h-4 w-4" />
-                                                                        </button>
-                                                                    </div>
-
-                                                                    <div className="flex items-center justify-between gap-2">
-                                                                        <span className="text-xs text-slate-500">#{index + 1}</span>
-                                                                        <div className="flex items-center gap-1">
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => handleDepartmentGroupPhotoReorder(department, index, -1)}
-                                                                                disabled={isGroupPhotoBusy || index === 0 || !photoItem.id}
-                                                                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 disabled:opacity-50"
-                                                                                aria-label={`Move photo ${index + 1} left`}
-                                                                                title="Move earlier"
-                                                                            >
-                                                                                <ArrowLeft className="h-4 w-4" />
-                                                                            </button>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => handleDepartmentGroupPhotoReorder(department, index, 1)}
-                                                                                disabled={isGroupPhotoBusy || index === groupPhotoItems.length - 1 || !photoItem.id}
-                                                                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 disabled:opacity-50"
-                                                                                aria-label={`Move photo ${index + 1} right`}
-                                                                                title="Move later"
-                                                                            >
-                                                                                <ArrowRight className="h-4 w-4" />
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex h-32 items-center justify-center rounded-lg bg-white text-xs text-slate-500 ring-1 ring-slate-200 sm:h-40">
-                                                            No department group photo uploaded yet.
-                                                        </div>
-                                                    )}
-
-                                                    <div className="space-y-2">
-                                                        <Input
-                                                            id={`department_group_photo_upload_${department.id}`}
-                                                            type="file"
-                                                            accept="image/*"
-                                                            multiple
-                                                            onChange={(event) => handleDepartmentGroupPhotoUpload(department.id, event)}
-                                                            disabled={isGroupPhotoBusy}
-                                                            className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white disabled:cursor-not-allowed"
-                                                        />
-                                                        <p className="text-xs text-slate-500">
-                                                            New uploads append automatically. Reorder with arrows. Remove only via the X button on each image.
-                                                        </p>
-                                                        {isGroupPhotoUploadBusy ? (
-                                                            <p className="inline-flex items-center gap-2 text-xs text-slate-600">
-                                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                                Uploading department photos...
-                                                            </p>
-                                                        ) : null}
-                                                    </div>
-                                                </div>
-                                            </div>
-
                                             {isActiveDepartment ? (
-                                                <div className="mt-5 space-y-4 border-t border-slate-200 pt-5">
-                                                    <h5 className="text-sm font-semibold text-slate-900">Faculty</h5>
-
-                                                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                                                        <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Add Faculty</p>
-                                                        <div className="mt-3 grid gap-3 md:grid-cols-3">
-                                                            <div className="space-y-2">
-                                                                <Label>Name</Label>
-                                                                <Input
-                                                                    value={newFacultyDraft.name}
-                                                                    onChange={(event) => updateNewFacultyField(department.id, 'name', event.target.value)}
-                                                                    placeholder="Dr. Maria Santos"
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label>Role</Label>
-                                                                <Input
-                                                                    value={newFacultyDraft.role}
-                                                                    onChange={(event) => updateNewFacultyField(department.id, 'role', event.target.value)}
-                                                                    placeholder="Program Chair"
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label>Faculty Image</Label>
-                                                                <Input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    onChange={(event) => updateNewFacultyField(department.id, 'photo_upload', event.target.files?.[0] || null)}
-                                                                    className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
-                                                                />
-                                                                <p className="text-[11px] text-slate-500">
-                                                                    Upload JPG/PNG/WebP (max 4MB).
-                                                                </p>
+                                                <>
+                                                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                                                        <div className="space-y-2">
+                                                            <Label>Department Option</Label>
+                                                            <select
+                                                                value={departmentDraft.department_template_id}
+                                                                onChange={(event) =>
+                                                                    updateDepartmentDraftField(
+                                                                        department.id,
+                                                                        'department_template_id',
+                                                                        event.target.value,
+                                                                    )
+                                                                }
+                                                                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                                                            >
+                                                                <option value="">Select department option</option>
+                                                                {departmentTemplates.map((template) => (
+                                                                    <option key={template.id} value={template.id}>
+                                                                        {template.label} - {template.full_name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Selected Details</Label>
+                                                            <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                                                                {selectedTemplate ? (
+                                                                    <>
+                                                                        <p className="font-semibold text-slate-900">
+                                                                            {selectedTemplate.label} - {selectedTemplate.full_name}
+                                                                        </p>
+                                                                        <p className="mt-1 text-slate-500">{selectedTemplate.description}</p>
+                                                                    </>
+                                                                ) : (
+                                                                    <p>Choose a department option from the list.</p>
+                                                                )}
                                                             </div>
                                                         </div>
+                                                    </div>
+
+                                                    <div className="mt-4 flex items-center gap-2">
                                                         <Button
                                                             type="button"
-                                                            className="mt-3"
-                                                            onClick={() => handleCreateFaculty(department.id)}
-                                                            disabled={busyKey === `create-faculty-${department.id}`}
+                                                            onClick={() => handleUpdateDepartment(selectedYearbook.id, department.id)}
+                                                            disabled={
+                                                                busyKey === `update-department-${department.id}` ||
+                                                                !String(departmentDraft.department_template_id || '')
+                                                            }
                                                         >
-                                                            <Plus className="mr-2 h-4 w-4" />
-                                                            {busyKey === `create-faculty-${department.id}` ? 'Creating...' : 'Add Faculty'}
+                                                            <Save className="mr-2 h-4 w-4" />
+                                                            {busyKey === `update-department-${department.id}` ? 'Saving...' : 'Save Department'}
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="destructive"
+                                                            onClick={() => handleDeleteDepartment(selectedYearbook.id, department.id)}
+                                                            disabled={busyKey === `delete-department-${department.id}`}
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            {busyKey === `delete-department-${department.id}` ? 'Deleting...' : 'Delete'}
                                                         </Button>
                                                     </div>
 
-                                                    <div className="space-y-3">
-                                                        {(department.faculty ?? []).length === 0 ? (
-                                                            <p className="text-xs text-slate-500">No faculty members yet.</p>
-                                                        ) : null}
+                                                    <div className="mt-4 space-y-2">
+                                                        <Label htmlFor={`department_group_photo_upload_${department.id}`}>Department Group Photos</Label>
+                                                        <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                                            {groupPhotoItems.length > 0 ? (
+                                                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                                                    {groupPhotoItems.map((photoItem, index) => (
+                                                                        <div key={`${photoItem.id || photoItem.photo}-${index}`} className="space-y-2">
+                                                                            <div className="relative overflow-hidden rounded-lg ring-1 ring-slate-200">
+                                                                                <img
+                                                                                    src={photoItem.photo}
+                                                                                    alt={`Department group photo ${index + 1}`}
+                                                                                    className="h-36 w-full object-cover sm:h-40"
+                                                                                    onError={(event) => {
+                                                                                        event.currentTarget.onerror = null;
+                                                                                        event.currentTarget.src =
+                                                                                            'https://via.placeholder.com/640x360?text=Department+Group+Photo';
+                                                                                    }}
+                                                                                />
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleDepartmentGroupPhotoDelete(department, photoItem)}
+                                                                                    disabled={isGroupPhotoBusy || !photoItem.id}
+                                                                                    className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black disabled:opacity-50"
+                                                                                    aria-label={`Remove group photo ${index + 1}`}
+                                                                                    title="Remove photo"
+                                                                                >
+                                                                                    <X className="h-4 w-4" />
+                                                                                </button>
+                                                                            </div>
 
+                                                                            <div className="flex items-center justify-between gap-2">
+                                                                                <span className="text-xs text-slate-500">#{index + 1}</span>
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleDepartmentGroupPhotoReorder(department, index, -1)}
+                                                                                        disabled={isGroupPhotoBusy || index === 0 || !photoItem.id}
+                                                                                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 disabled:opacity-50"
+                                                                                        aria-label={`Move photo ${index + 1} left`}
+                                                                                        title="Move earlier"
+                                                                                    >
+                                                                                        <ArrowLeft className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleDepartmentGroupPhotoReorder(department, index, 1)}
+                                                                                        disabled={isGroupPhotoBusy || index === groupPhotoItems.length - 1 || !photoItem.id}
+                                                                                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 disabled:opacity-50"
+                                                                                        aria-label={`Move photo ${index + 1} right`}
+                                                                                        title="Move later"
+                                                                                    >
+                                                                                        <ArrowRight className="h-4 w-4" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex h-32 items-center justify-center rounded-lg bg-white text-xs text-slate-500 ring-1 ring-slate-200 sm:h-40">
+                                                                    No department group photo uploaded yet.
+                                                                </div>
+                                                            )}
+
+                                                            <div className="space-y-2">
+                                                                <Input
+                                                                    id={`department_group_photo_upload_${department.id}`}
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    multiple
+                                                                    onChange={(event) => handleDepartmentGroupPhotoUpload(department.id, event)}
+                                                                    disabled={isGroupPhotoBusy}
+                                                                    className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white disabled:cursor-not-allowed"
+                                                                />
+                                                                <p className="text-xs text-slate-500">
+                                                                    New uploads append automatically. Reorder with arrows. Remove only via the X button on each image.
+                                                                </p>
+                                                                {isGroupPhotoUploadBusy ? (
+                                                                    <p className="inline-flex items-center gap-2 text-xs text-slate-600">
+                                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                                        Uploading department photos...
+                                                                    </p>
+                                                                ) : null}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-5 space-y-4 border-t border-slate-200 pt-5">
+                                                    <h5 className="text-sm font-semibold text-slate-900">Faculty</h5>
+
+                                                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                                                         {(department.faculty ?? []).map((member) => {
                                                             const facultyDraft = facultyDrafts[member.id] || toFacultyDraft(member);
+                                                            const isUpdateFacultyBusy = busyKey === `update-faculty-${member.id}`;
+                                                            const isDeleteFacultyBusy = busyKey === `delete-faculty-${member.id}`;
+                                                            const selectedFacultyRole =
+                                                                facultyRoleById[String(facultyDraft.faculty_role_id)] || null;
+                                                            const canUpdateFaculty =
+                                                                facultyDraft.name.trim() !== '' &&
+                                                                String(facultyDraft.faculty_role_id || '').trim() !== '';
 
                                                             return (
-                                                                <div key={member.id} className="rounded-lg border border-slate-200 p-3">
-                                                                    <div className="grid gap-3 md:grid-cols-3">
-                                                                        <div className="space-y-2">
-                                                                            <Label>Name</Label>
-                                                                            <Input
-                                                                                value={facultyDraft.name}
-                                                                                onChange={(event) => updateFacultyDraftField(member.id, 'name', event.target.value)}
-                                                                            />
+                                                                <div key={member.id} className="h-full rounded-lg border border-slate-200 p-3">
+                                                                    <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_170px]">
+                                                                        <div className="space-y-3">
+                                                                            <div className="space-y-2">
+                                                                                <Label>Name</Label>
+                                                                                <Input
+                                                                                    value={facultyDraft.name}
+                                                                                    onChange={(event) =>
+                                                                                        updateFacultyDraftField(member.id, 'name', event.target.value)
+                                                                                    }
+                                                                                />
+                                                                            </div>
+                                                                            <div className="space-y-2">
+                                                                                <Label>Role</Label>
+                                                                                <select
+                                                                                    value={facultyDraft.faculty_role_id}
+                                                                                    onChange={(event) =>
+                                                                                        updateFacultyDraftField(member.id, 'faculty_role_id', event.target.value)
+                                                                                    }
+                                                                                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                                                                                >
+                                                                                    <option value="">Select role</option>
+                                                                                    {facultyRoles.map((role) => (
+                                                                                        <option key={role.id} value={role.id}>
+                                                                                            {role.name}
+                                                                                        </option>
+                                                                                    ))}
+                                                                                </select>
+                                                                            </div>
+                                                                            <div className="space-y-2">
+                                                                                <Label htmlFor={`faculty_upload_${member.id}`}>Replace Image (Optional)</Label>
+                                                                                <Input
+                                                                                    id={`faculty_upload_${member.id}`}
+                                                                                    type="file"
+                                                                                    accept="image/*"
+                                                                                    onChange={(event) =>
+                                                                                        updateFacultyDraftField(
+                                                                                            member.id,
+                                                                                            'photo_upload',
+                                                                                            event.target.files?.[0] || null,
+                                                                                        )
+                                                                                    }
+                                                                                    className={facultyUploadInputClassName}
+                                                                                />
+                                                                                <div className="flex items-center justify-between gap-2">
+                                                                                    <p className="truncate text-[11px] text-slate-500">
+                                                                                        {facultyDraft.photo_upload?.name || 'Leave empty to keep current image.'}
+                                                                                    </p>
+                                                                                    <Button
+                                                                                        type="button"
+                                                                                        size="sm"
+                                                                                        variant="outline"
+                                                                                        onClick={() => updateFacultyDraftField(member.id, 'photo_upload', null)}
+                                                                                        disabled={!(facultyDraft.photo_upload instanceof File)}
+                                                                                    >
+                                                                                        Reset
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
-                                                                        <div className="space-y-2">
-                                                                            <Label>Role</Label>
-                                                                            <Input
-                                                                                value={facultyDraft.role}
-                                                                                onChange={(event) => updateFacultyDraftField(member.id, 'role', event.target.value)}
-                                                                            />
-                                                                        </div>
-                                                                        <div className="space-y-2">
-                                                                            <Label>Replace Image (Optional)</Label>
-                                                                            <Input
-                                                                                type="file"
-                                                                                accept="image/*"
-                                                                                onChange={(event) => updateFacultyDraftField(member.id, 'photo_upload', event.target.files?.[0] || null)}
-                                                                                className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
-                                                                            />
-                                                                            <p className="text-[11px] text-slate-500">
-                                                                                Leave empty to keep current image.
+
+                                                                        <div className="space-y-2 sm:justify-self-end">
+                                                                            <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
+                                                                                Preview
                                                                             </p>
+                                                                            <FacultyPreviewCard
+                                                                                name={facultyDraft.name}
+                                                                                role={selectedFacultyRole?.name || member.role || ''}
+                                                                                photo={member.photo}
+                                                                                photoFile={facultyDraft.photo_upload}
+                                                                            />
                                                                         </div>
                                                                     </div>
-                                                                    {member.photo ? (
-                                                                        <div className="mt-3">
-                                                                            <img
-                                                                                src={member.photo}
-                                                                                alt={member.name}
-                                                                                className="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-200"
-                                                                            />
-                                                                        </div>
-                                                                    ) : null}
                                                                     <div className="mt-3 flex items-center gap-2">
                                                                         <Button
                                                                             type="button"
                                                                             onClick={() => handleUpdateFaculty(department.id, member.id)}
-                                                                            disabled={busyKey === `update-faculty-${member.id}`}
+                                                                            disabled={isUpdateFacultyBusy || !canUpdateFaculty}
                                                                         >
                                                                             <Save className="mr-2 h-4 w-4" />
-                                                                            {busyKey === `update-faculty-${member.id}` ? 'Saving...' : 'Save'}
+                                                                            {isUpdateFacultyBusy ? 'Saving...' : 'Save'}
                                                                         </Button>
                                                                         <Button
                                                                             type="button"
                                                                             variant="destructive"
                                                                             onClick={() => handleDeleteFaculty(department.id, member.id)}
-                                                                            disabled={busyKey === `delete-faculty-${member.id}`}
+                                                                            disabled={isDeleteFacultyBusy}
                                                                         >
                                                                             <Trash2 className="mr-2 h-4 w-4" />
-                                                                            {busyKey === `delete-faculty-${member.id}` ? 'Deleting...' : 'Delete'}
+                                                                            {isDeleteFacultyBusy ? 'Deleting...' : 'Delete'}
                                                                         </Button>
                                                                     </div>
                                                                 </div>
                                                             );
                                                         })}
+
+                                                        <div className="h-full rounded-lg border border-slate-200 p-3">
+                                                            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Add Faculty</p>
+                                                            <div className="mt-3 grid gap-4 sm:grid-cols-[minmax(0,1fr)_170px]">
+                                                                <div className="space-y-3">
+                                                                    <div className="space-y-2">
+                                                                        <Label>Name</Label>
+                                                                        <Input
+                                                                            value={newFacultyDraft.name}
+                                                                            onChange={(event) =>
+                                                                                updateNewFacultyField(department.id, 'name', event.target.value)
+                                                                            }
+                                                                            placeholder="Dr. Maria Santos"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label>Role</Label>
+                                                                        <select
+                                                                            value={newFacultyDraft.faculty_role_id}
+                                                                            onChange={(event) =>
+                                                                                updateNewFacultyField(department.id, 'faculty_role_id', event.target.value)
+                                                                            }
+                                                                            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                                                                        >
+                                                                            <option value="">Select role</option>
+                                                                            {facultyRoles.map((role) => (
+                                                                                <option key={role.id} value={role.id}>
+                                                                                    {role.name}
+                                                                                </option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label htmlFor={`faculty_upload_new_${department.id}`}>Faculty Image</Label>
+                                                                        <Input
+                                                                            id={`faculty_upload_new_${department.id}`}
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            onChange={(event) =>
+                                                                                updateNewFacultyField(
+                                                                                    department.id,
+                                                                                    'photo_upload',
+                                                                                    event.target.files?.[0] || null,
+                                                                                )
+                                                                            }
+                                                                            className={facultyUploadInputClassName}
+                                                                        />
+                                                                        <div className="flex items-center justify-between gap-2">
+                                                                            <p className="truncate text-[11px] text-slate-500">
+                                                                                {newFacultyDraft.photo_upload?.name || 'Upload JPG/PNG/WebP (max 4MB).'}
+                                                                            </p>
+                                                                            <Button
+                                                                                type="button"
+                                                                                size="sm"
+                                                                                variant="outline"
+                                                                                onClick={() =>
+                                                                                    setNewFacultyDrafts((current) => ({
+                                                                                        ...current,
+                                                                                        [department.id]: { ...EMPTY_FACULTY_FORM },
+                                                                                    }))
+                                                                                }
+                                                                                disabled={
+                                                                                    newFacultyDraft.name.trim() === '' &&
+                                                                                    String(newFacultyDraft.faculty_role_id || '').trim() === '' &&
+                                                                                    !(newFacultyDraft.photo_upload instanceof File)
+                                                                                }
+                                                                            >
+                                                                                Reset
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="space-y-2 sm:justify-self-end">
+                                                                    <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
+                                                                        Preview
+                                                                    </p>
+                                                                    <FacultyPreviewCard
+                                                                        name={newFacultyDraft.name}
+                                                                        role={(facultyRoleById[String(newFacultyDraft.faculty_role_id)] || {}).name || ''}
+                                                                        photo={null}
+                                                                        photoFile={newFacultyDraft.photo_upload}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div className="mt-3 flex items-center gap-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    onClick={() => handleCreateFaculty(department.id)}
+                                                                    disabled={isCreateFacultyBusy || !canCreateFaculty}
+                                                                >
+                                                                    <Plus className="mr-2 h-4 w-4" />
+                                                                    {isCreateFacultyBusy ? 'Creating...' : 'Add Faculty'}
+                                                                </Button>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                    </div>
+                                                </>
                                             ) : null}
                                         </article>
                                     );
@@ -1220,6 +1647,232 @@ export default function AdminYearbooksPage() {
                                 </DialogClose>
                             </div>
                         </form>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={departmentOptionsOpen} onOpenChange={setDepartmentOptionsOpen}>
+                <DialogContent className="flex items-center justify-center p-4">
+                    <div className="w-full max-w-5xl rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-900/10">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <p
+                                    className="text-xs uppercase tracking-[0.15em]"
+                                    style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.red }}
+                                >
+                                    Reference Data
+                                </p>
+                                <h3 className="mt-1 text-xl font-semibold text-slate-900">Department Options</h3>
+                                <p className="mt-1 text-xs text-slate-500">{departmentTemplates.length} total</p>
+                            </div>
+                            <DialogClose className="h-9 w-9 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">
+                                <X className="mx-auto h-4 w-4" />
+                            </DialogClose>
+                        </div>
+
+                        <div className="max-h-[72vh] space-y-4 overflow-y-auto pr-1">
+                            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Add Department Option</p>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label>Label</Label>
+                                        <Input
+                                            value={newDepartmentTemplate.label}
+                                            onChange={(event) =>
+                                                setNewDepartmentTemplate((current) => ({
+                                                    ...current,
+                                                    label: event.target.value.toUpperCase(),
+                                                }))
+                                            }
+                                            placeholder="BSCS"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Full Name</Label>
+                                        <Input
+                                            value={newDepartmentTemplate.full_name}
+                                            onChange={(event) =>
+                                                setNewDepartmentTemplate((current) => ({ ...current, full_name: event.target.value }))
+                                            }
+                                            placeholder="Bachelor of Science in Computer Science"
+                                        />
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label>Description</Label>
+                                        <Textarea
+                                            rows={2}
+                                            value={newDepartmentTemplate.description}
+                                            onChange={(event) =>
+                                                setNewDepartmentTemplate((current) => ({ ...current, description: event.target.value }))
+                                            }
+                                            placeholder="Program description"
+                                        />
+                                    </div>
+                                </div>
+                                <Button
+                                    type="button"
+                                    onClick={handleCreateDepartmentTemplate}
+                                    disabled={busyKey === 'create-department-template'}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    {busyKey === 'create-department-template' ? 'Creating...' : 'Add Option'}
+                                </Button>
+                            </div>
+
+                            <div className="space-y-3">
+                                {departmentTemplates.length === 0 ? (
+                                    <p className="text-xs text-slate-500">No department options yet.</p>
+                                ) : null}
+
+                                {departmentTemplates.map((template) => {
+                                    const draft = departmentTemplateDrafts[template.id] || {
+                                        ...EMPTY_DEPARTMENT_TEMPLATE_FORM,
+                                        ...template,
+                                    };
+
+                                    return (
+                                        <div key={template.id} className="rounded-lg border border-slate-200 p-3">
+                                            <div className="grid gap-3 md:grid-cols-2">
+                                                <div className="space-y-2">
+                                                    <Label>Label</Label>
+                                                    <Input
+                                                        value={draft.label}
+                                                        onChange={(event) =>
+                                                            updateDepartmentTemplateDraftField(
+                                                                template.id,
+                                                                'label',
+                                                                event.target.value.toUpperCase(),
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Full Name</Label>
+                                                    <Input
+                                                        value={draft.full_name}
+                                                        onChange={(event) =>
+                                                            updateDepartmentTemplateDraftField(template.id, 'full_name', event.target.value)
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="space-y-2 md:col-span-2">
+                                                    <Label>Description</Label>
+                                                    <Textarea
+                                                        rows={2}
+                                                        value={draft.description}
+                                                        onChange={(event) =>
+                                                            updateDepartmentTemplateDraftField(template.id, 'description', event.target.value)
+                                                        }
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 flex items-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => handleUpdateDepartmentTemplate(template.id)}
+                                                    disabled={busyKey === `update-department-template-${template.id}`}
+                                                >
+                                                    <Save className="mr-2 h-4 w-4" />
+                                                    {busyKey === `update-department-template-${template.id}` ? 'Saving...' : 'Save'}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    onClick={() => handleDeleteDepartmentTemplate(template.id)}
+                                                    disabled={busyKey === `delete-department-template-${template.id}`}
+                                                >
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    {busyKey === `delete-department-template-${template.id}` ? 'Deleting...' : 'Delete'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={facultyRolesOpen} onOpenChange={setFacultyRolesOpen}>
+                <DialogContent className="flex items-center justify-center p-4">
+                    <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-900/10">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <p
+                                    className="text-xs uppercase tracking-[0.15em]"
+                                    style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.red }}
+                                >
+                                    Reference Data
+                                </p>
+                                <h3 className="mt-1 text-xl font-semibold text-slate-900">Faculty Roles</h3>
+                                <p className="mt-1 text-xs text-slate-500">{facultyRoles.length} total</p>
+                            </div>
+                            <DialogClose className="h-9 w-9 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">
+                                <X className="mx-auto h-4 w-4" />
+                            </DialogClose>
+                        </div>
+
+                        <div className="max-h-[72vh] space-y-4 overflow-y-auto pr-1">
+                            <div className="flex items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                <div className="min-w-0 flex-1 space-y-2">
+                                    <Label>Role Name</Label>
+                                    <Input
+                                        value={newFacultyRole.name}
+                                        onChange={(event) => setNewFacultyRole({ name: event.target.value })}
+                                        placeholder="Program Chair"
+                                    />
+                                </div>
+                                <Button
+                                    type="button"
+                                    onClick={handleCreateFacultyRole}
+                                    disabled={busyKey === 'create-faculty-role'}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    {busyKey === 'create-faculty-role' ? 'Adding...' : 'Add'}
+                                </Button>
+                            </div>
+
+                            <div className="space-y-3">
+                                {facultyRoles.length === 0 ? (
+                                    <p className="text-xs text-slate-500">No faculty roles yet.</p>
+                                ) : null}
+
+                                {facultyRoles.map((role) => {
+                                    const draft = facultyRoleDrafts[role.id] || { name: role.name ?? '' };
+
+                                    return (
+                                        <div
+                                            key={role.id}
+                                            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-3"
+                                        >
+                                            <Input
+                                                value={draft.name}
+                                                onChange={(event) => updateFacultyRoleDraftField(role.id, event.target.value)}
+                                                className="min-w-[220px] flex-1"
+                                            />
+                                            <Button
+                                                type="button"
+                                                onClick={() => handleUpdateFacultyRole(role.id)}
+                                                disabled={busyKey === `update-faculty-role-${role.id}`}
+                                            >
+                                                <Save className="mr-2 h-4 w-4" />
+                                                {busyKey === `update-faculty-role-${role.id}` ? 'Saving...' : 'Save'}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                onClick={() => handleDeleteFacultyRole(role.id)}
+                                                disabled={busyKey === `delete-faculty-role-${role.id}`}
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                {busyKey === `delete-faculty-role-${role.id}` ? 'Deleting...' : 'Delete'}
+                                            </Button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\DepartmentGroupPhoto;
+use App\Models\DepartmentTemplate;
 use App\Models\Faculty;
+use App\Models\FacultyRole;
 use App\Models\SchoolSetting;
 use App\Models\Yearbook;
 use App\Support\DepartmentGroupPhotoMedia;
@@ -28,9 +30,10 @@ class YearbookController extends Controller
 
         $yearbooks = Yearbook::query()
             ->with([
-                'departments:id,yearbook_id,label,full_name,description,group_photo',
+                'departments:id,yearbook_id,department_template_id,group_photo',
+                'departments.template:id,label,full_name,description',
                 'departments.groupPhotos:id,department_id,photo,sort_order',
-                'departments.faculty:id,department_id,name,role,photo',
+                'departments.faculty:id,department_id,faculty_role_id,name,role,photo',
                 'departments.students:id,department_id',
                 'students:id,yearbook_id',
             ])
@@ -100,17 +103,24 @@ class YearbookController extends Controller
     public function storeDepartment(Request $request, Yearbook $yearbook): JsonResponse
     {
         $validated = $request->validate([
-            'label' => [
-                'required',
-                'string',
-                'max:32',
-                Rule::unique('departments', 'label')->where(fn ($query) => $query->where('yearbook_id', $yearbook->id)),
-            ],
-            'full_name' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:4000'],
+            'department_template_id' => ['required', 'integer', Rule::exists('department_templates', 'id')],
         ]);
 
-        $yearbook->departments()->create($validated);
+        $template = DepartmentTemplate::query()->findOrFail($validated['department_template_id']);
+
+        $alreadyExists = $yearbook->departments()
+            ->where('department_template_id', $template->id)
+            ->exists();
+
+        if ($alreadyExists) {
+            return response()->json([
+                'message' => 'This department is already added to the selected yearbook.',
+            ], 422);
+        }
+
+        $yearbook->departments()->create([
+            'department_template_id' => $template->id,
+        ]);
 
         return response()->json([
             'message' => 'Department created successfully.',
@@ -126,19 +136,25 @@ class YearbookController extends Controller
         }
 
         $validated = $request->validate([
-            'label' => [
-                'required',
-                'string',
-                'max:32',
-                Rule::unique('departments', 'label')
-                    ->where(fn ($query) => $query->where('yearbook_id', $yearbook->id))
-                    ->ignore($department->id),
-            ],
-            'full_name' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:4000'],
+            'department_template_id' => ['required', 'integer', Rule::exists('department_templates', 'id')],
         ]);
 
-        $department->update($validated);
+        $template = DepartmentTemplate::query()->findOrFail($validated['department_template_id']);
+
+        $alreadyExists = $yearbook->departments()
+            ->where('department_template_id', $template->id)
+            ->where('id', '!=', $department->id)
+            ->exists();
+
+        if ($alreadyExists) {
+            return response()->json([
+                'message' => 'This department is already added to the selected yearbook.',
+            ], 422);
+        }
+
+        $department->update([
+            'department_template_id' => $template->id,
+        ]);
 
         return response()->json([
             'message' => 'Department updated successfully.',
@@ -184,7 +200,7 @@ class YearbookController extends Controller
 
         $department->refresh()->load([
             'groupPhotos:id,department_id,photo,sort_order',
-            'faculty:id,department_id,name,role,photo',
+            'faculty:id,department_id,faculty_role_id,name,role,photo',
             'students:id,department_id',
         ]);
 
@@ -232,13 +248,13 @@ class YearbookController extends Controller
 
         $department->refresh()->load([
             'groupPhotos:id,department_id,photo,sort_order',
-            'faculty:id,department_id,name,role,photo',
+            'faculty:id,department_id,faculty_role_id,name,role,photo',
             'students:id,department_id',
         ]);
         $this->syncDepartmentPrimaryGroupPhoto($department);
         $department->refresh()->load([
             'groupPhotos:id,department_id,photo,sort_order',
-            'faculty:id,department_id,name,role,photo',
+            'faculty:id,department_id,faculty_role_id,name,role,photo',
             'students:id,department_id',
         ]);
 
@@ -263,13 +279,13 @@ class YearbookController extends Controller
 
         $department->refresh()->load([
             'groupPhotos:id,department_id,photo,sort_order',
-            'faculty:id,department_id,name,role,photo',
+            'faculty:id,department_id,faculty_role_id,name,role,photo',
             'students:id,department_id',
         ]);
         $this->syncDepartmentPrimaryGroupPhoto($department);
         $department->refresh()->load([
             'groupPhotos:id,department_id,photo,sort_order',
-            'faculty:id,department_id,name,role,photo',
+            'faculty:id,department_id,faculty_role_id,name,role,photo',
             'students:id,department_id',
         ]);
 
@@ -283,15 +299,17 @@ class YearbookController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'role' => ['required', 'string', 'max:255'],
+            'faculty_role_id' => ['required', 'integer', Rule::exists('faculty_roles', 'id')],
             'photo_upload' => ['required', 'file', 'image', 'max:4096'],
         ]);
 
         $photo = $this->storeUploadedFacultyPhoto($validated['photo_upload']);
+        $facultyRole = FacultyRole::query()->findOrFail($validated['faculty_role_id']);
 
         $department->faculty()->create([
             'name' => $validated['name'],
-            'role' => $validated['role'],
+            'faculty_role_id' => $facultyRole->id,
+            'role' => $facultyRole->name,
             'photo' => $photo,
         ]);
 
@@ -310,11 +328,12 @@ class YearbookController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'role' => ['required', 'string', 'max:255'],
+            'faculty_role_id' => ['required', 'integer', Rule::exists('faculty_roles', 'id')],
             'photo_upload' => ['nullable', 'file', 'image', 'max:4096'],
         ]);
 
         $photo = $faculty->photo;
+        $facultyRole = FacultyRole::query()->findOrFail($validated['faculty_role_id']);
 
         if (array_key_exists('photo_upload', $validated) && $validated['photo_upload'] instanceof UploadedFile) {
             $this->deleteManagedFacultyPhoto($faculty->photo);
@@ -323,7 +342,8 @@ class YearbookController extends Controller
 
         $faculty->update([
             'name' => $validated['name'],
-            'role' => $validated['role'],
+            'faculty_role_id' => $facultyRole->id,
+            'role' => $facultyRole->name,
             'photo' => $photo,
         ]);
 
@@ -371,10 +391,13 @@ class YearbookController extends Controller
 
     private function departmentPayload(Department $department): array
     {
+        $department->loadMissing('template:id,label,full_name,description');
+
         $facultyMembers = $department->faculty
             ->map(fn (Faculty $faculty) => [
                 'id' => $faculty->id,
                 'department_id' => $faculty->department_id,
+                'faculty_role_id' => $faculty->faculty_role_id,
                 'name' => $faculty->name,
                 'role' => $faculty->role,
                 'photo' => FacultyPhotoMedia::normalizePublicUrl($faculty->photo),
@@ -384,6 +407,7 @@ class YearbookController extends Controller
         return [
             'id' => $department->id,
             'yearbook_id' => $department->yearbook_id,
+            'department_template_id' => $department->department_template_id,
             'label' => $department->label,
             'full_name' => $department->full_name,
             'description' => $department->description,

@@ -19,7 +19,8 @@ class RegistrationLinkController extends Controller
         $links = RegistrationLink::query()
             ->with([
                 'yearbook:id,graduating_year,academic_year_text',
-                'department:id,label,full_name,yearbook_id',
+                'department:id,department_template_id,yearbook_id',
+                'department.template:id,label,full_name,description',
                 'department.yearbook:id,graduating_year',
                 'creator:id,name',
             ])
@@ -47,7 +48,8 @@ class RegistrationLinkController extends Controller
 
         $link->load([
             'yearbook:id,graduating_year,academic_year_text',
-            'department:id,label,full_name,yearbook_id',
+            'department:id,department_template_id,yearbook_id',
+            'department.template:id,label,full_name,description',
             'department.yearbook:id,graduating_year',
             'creator:id,name',
         ]);
@@ -64,7 +66,8 @@ class RegistrationLinkController extends Controller
     {
         $registrationLink->load([
             'yearbook:id,graduating_year,academic_year_text',
-            'department:id,label,full_name,yearbook_id',
+            'department:id,department_template_id,yearbook_id',
+            'department.template:id,label,full_name,description',
             'department.yearbook:id,graduating_year',
             'creator:id,name',
         ]);
@@ -83,7 +86,8 @@ class RegistrationLinkController extends Controller
         $registrationLink->update($validated);
         $registrationLink->load([
             'yearbook:id,graduating_year,academic_year_text',
-            'department:id,label,full_name,yearbook_id',
+            'department:id,department_template_id,yearbook_id',
+            'department.template:id,label,full_name,description',
             'department.yearbook:id,graduating_year',
             'creator:id,name',
         ]);
@@ -103,7 +107,8 @@ class RegistrationLinkController extends Controller
 
         $registrationLink->load([
             'yearbook:id,graduating_year,academic_year_text',
-            'department:id,label,full_name,yearbook_id',
+            'department:id,department_template_id,yearbook_id',
+            'department.template:id,label,full_name,description',
             'department.yearbook:id,graduating_year',
             'creator:id,name',
         ]);
@@ -215,9 +220,9 @@ class RegistrationLinkController extends Controller
             ->values();
 
         $departments = Department::query()
-            ->with('yearbook:id,graduating_year')
-            ->orderBy('label')
-            ->get(['id', 'label', 'full_name', 'yearbook_id'])
+            ->with(['template:id,label,full_name,description', 'yearbook:id,graduating_year'])
+            ->get(['id', 'department_template_id', 'yearbook_id'])
+            ->sortBy(fn (Department $department) => strtoupper((string) ($department->label ?? '')))
             ->map(fn (Department $department) => [
                 'id' => $department->id,
                 'label' => $department->label,
@@ -264,6 +269,7 @@ class RegistrationLinkController extends Controller
                 'id' => $link->department->id,
                 'label' => $link->department->label,
                 'full_name' => $link->department->full_name,
+                'department_template_id' => $link->department->department_template_id,
                 'yearbook_id' => $link->department->yearbook_id,
                 'graduating_year' => $link->department->yearbook?->graduating_year,
             ] : null,

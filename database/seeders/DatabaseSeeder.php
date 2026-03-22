@@ -4,7 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\Department;
 use App\Models\DepartmentGroupPhoto;
+use App\Models\DepartmentTemplate;
 use App\Models\Faculty;
+use App\Models\FacultyRole;
 use App\Models\Reaction;
 use App\Models\RegistrationLink;
 use App\Models\SchoolSetting;
@@ -27,8 +29,10 @@ class DatabaseSeeder extends Seeder
         Student::query()->delete();
         RegistrationLink::query()->delete();
         Faculty::query()->delete();
+        FacultyRole::query()->delete();
         DepartmentGroupPhoto::query()->delete();
         Department::query()->delete();
+        DepartmentTemplate::query()->delete();
         Yearbook::query()->delete();
         Reaction::query()->delete();
         YearbookComment::query()->delete();
@@ -56,47 +60,65 @@ class DatabaseSeeder extends Seeder
             'hero_description' => 'Building bridges, creating futures.',
         ]);
 
-        $cs = Department::query()->create([
-            'yearbook_id' => $yearbook2025->id,
+        $templateBscs = DepartmentTemplate::query()->create([
             'label' => 'BSCS',
             'full_name' => 'Bachelor of Science in Computer Science',
             'description' => 'Focused on software engineering, systems, and intelligent applications.',
+        ]);
+
+        $templateBsba = DepartmentTemplate::query()->create([
+            'label' => 'BSBA',
+            'full_name' => 'Bachelor of Science in Business Administration',
+            'description' => 'Built around strategic thinking, leadership, and entrepreneurship.',
+        ]);
+
+        $templateBeed = DepartmentTemplate::query()->create([
+            'label' => 'BEED',
+            'full_name' => 'Bachelor of Elementary Education',
+            'description' => 'Prepared future educators for learner-centered and inclusive classrooms.',
+        ]);
+
+        $facultyRoleProgramChair = FacultyRole::query()->create([
+            'name' => 'Program Chair',
+        ]);
+
+        $facultyRoleSeniorLecturer = FacultyRole::query()->create([
+            'name' => 'Senior Lecturer',
+        ]);
+
+        $facultyRoleDean = FacultyRole::query()->create([
+            'name' => 'Dean',
+        ]);
+
+        $cs = Department::query()->create([
+            'yearbook_id' => $yearbook2025->id,
+            'department_template_id' => $templateBscs->id,
             'group_photo' => 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80',
         ]);
 
         $bsba = Department::query()->create([
             'yearbook_id' => $yearbook2025->id,
-            'label' => 'BSBA',
-            'full_name' => 'Bachelor of Science in Business Administration',
-            'description' => 'Built around strategic thinking, leadership, and entrepreneurship.',
+            'department_template_id' => $templateBsba->id,
             'group_photo' => 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
         ]);
 
         $beed = Department::query()->create([
             'yearbook_id' => $yearbook2025->id,
-            'label' => 'BEED',
-            'full_name' => 'Bachelor of Elementary Education',
-            'description' => 'Prepared future educators for learner-centered and inclusive classrooms.',
+            'department_template_id' => $templateBeed->id,
             'group_photo' => 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=80',
         ]);
 
         Department::query()->create([
             'yearbook_id' => $yearbook2024->id,
-            'label' => 'BSCS',
-            'full_name' => 'Bachelor of Science in Computer Science',
-            'description' => 'Focused on software engineering, systems, and intelligent applications.',
+            'department_template_id' => $templateBscs->id,
         ]);
         Department::query()->create([
             'yearbook_id' => $yearbook2024->id,
-            'label' => 'BSBA',
-            'full_name' => 'Bachelor of Science in Business Administration',
-            'description' => 'Built around strategic thinking, leadership, and entrepreneurship.',
+            'department_template_id' => $templateBsba->id,
         ]);
         Department::query()->create([
             'yearbook_id' => $yearbook2024->id,
-            'label' => 'BEED',
-            'full_name' => 'Bachelor of Elementary Education',
-            'description' => 'Prepared future educators for learner-centered and inclusive classrooms.',
+            'department_template_id' => $templateBeed->id,
         ]);
 
         DepartmentGroupPhoto::query()->create([
@@ -122,20 +144,23 @@ class DatabaseSeeder extends Seeder
 
         $csFaculty = Faculty::query()->create([
             'department_id' => $cs->id,
+            'faculty_role_id' => $facultyRoleProgramChair->id,
             'name' => 'Dr. Maria Santos',
-            'role' => 'Program Chair',
+            'role' => $facultyRoleProgramChair->name,
             'photo' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
         ]);
         Faculty::query()->create([
             'department_id' => $bsba->id,
+            'faculty_role_id' => $facultyRoleSeniorLecturer->id,
             'name' => 'Prof. Daniel Cruz',
-            'role' => 'Senior Lecturer',
+            'role' => $facultyRoleSeniorLecturer->name,
             'photo' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
         ]);
         $beedFaculty = Faculty::query()->create([
             'department_id' => $beed->id,
+            'faculty_role_id' => $facultyRoleDean->id,
             'name' => 'Dr. Angela Reyes',
-            'role' => 'Dean',
+            'role' => $facultyRoleDean->name,
             'photo' => 'https://images.unsplash.com/photo-1551836022-4c4c79ecde51?auto=format&fit=crop&w=300&q=80',
         ]);
 

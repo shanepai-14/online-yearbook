@@ -13,15 +13,18 @@ class Department extends Model
 
     protected $fillable = [
         'yearbook_id',
-        'label',
-        'full_name',
-        'description',
+        'department_template_id',
         'group_photo',
     ];
 
     public function yearbook(): BelongsTo
     {
         return $this->belongsTo(Yearbook::class);
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(DepartmentTemplate::class, 'department_template_id');
     }
 
     public function faculty(): HasMany
@@ -42,5 +45,20 @@ class Department extends Model
     public function registrationLinks(): HasMany
     {
         return $this->hasMany(RegistrationLink::class);
+    }
+
+    public function getLabelAttribute($value): ?string
+    {
+        return filled($value) ? $value : $this->template?->label;
+    }
+
+    public function getFullNameAttribute($value): ?string
+    {
+        return filled($value) ? $value : $this->template?->full_name;
+    }
+
+    public function getDescriptionAttribute($value): ?string
+    {
+        return filled($value) ? $value : $this->template?->description;
     }
 }

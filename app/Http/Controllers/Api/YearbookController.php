@@ -23,7 +23,8 @@ class YearbookController extends Controller
 
         $yearbooks = Yearbook::query()
             ->with([
-                'departments:id,yearbook_id,label,group_photo',
+                'departments:id,yearbook_id,department_template_id,group_photo',
+                'departments.template:id,label,full_name,description',
                 'departments.groupPhotos:id,department_id,photo,sort_order',
                 'students:id,yearbook_id,department_id',
             ])
@@ -68,7 +69,8 @@ class YearbookController extends Controller
         $yearbook = Yearbook::query()
             ->where('graduating_year', $year)
             ->with([
-                'departments:id,yearbook_id,label,full_name,description,group_photo',
+                'departments:id,yearbook_id,department_template_id,group_photo',
+                'departments.template:id,label,full_name,description',
                 'departments.groupPhotos:id,department_id,photo,sort_order',
                 'departments.faculty:id,department_id,name,role,photo',
                 'students:id,yearbook_id,department_id,name,photo,motto,badge',

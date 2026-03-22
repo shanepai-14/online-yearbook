@@ -24,7 +24,8 @@ class RegistrationLinkController extends Controller
             ->where('token', $token)
             ->with([
                 'yearbook:id,graduating_year,academic_year_text',
-                'department:id,label,full_name,yearbook_id',
+                'department:id,department_template_id,yearbook_id',
+                'department.template:id,label,full_name,description',
                 'department.yearbook:id,graduating_year',
             ])
             ->first();
@@ -47,7 +48,8 @@ class RegistrationLinkController extends Controller
             ->where('token', $token)
             ->with([
                 'yearbook:id,graduating_year,academic_year_text',
-                'department:id,label,full_name,yearbook_id',
+                'department:id,department_template_id,yearbook_id',
+                'department.template:id,label,full_name,description',
                 'department.yearbook:id,graduating_year',
             ])
             ->first();
@@ -176,7 +178,7 @@ class RegistrationLinkController extends Controller
 
             $department = Department::query()
                 ->where('yearbook_id', $yearbook->id)
-                ->where('label', $baseDepartment->label)
+                ->where('department_template_id', $baseDepartment->department_template_id)
                 ->first();
 
             if (! $department) {
@@ -218,9 +220,9 @@ class RegistrationLinkController extends Controller
             ]);
 
         $departments = Department::query()
-            ->with('yearbook:id,graduating_year')
-            ->orderBy('label')
-            ->get(['id', 'label', 'full_name', 'yearbook_id'])
+            ->with(['template:id,label,full_name,description', 'yearbook:id,graduating_year'])
+            ->get(['id', 'department_template_id', 'yearbook_id'])
+            ->sortBy(fn (Department $department) => strtoupper((string) ($department->label ?? '')))
             ->map(fn (Department $department) => [
                 'id' => $department->id,
                 'label' => $department->label,
@@ -239,13 +241,13 @@ class RegistrationLinkController extends Controller
         }
 
         if ($link->type === RegistrationLink::TYPE_FIXED_DEPARTMENT_SELECT_YEAR) {
-            $baseDepartmentLabel = $link->department?->label;
+            $baseDepartmentTemplateId = $link->department?->department_template_id;
 
             $matchingDepartments = Department::query()
-                ->with('yearbook:id,graduating_year')
-                ->where('label', $baseDepartmentLabel)
+                ->with(['template:id,label,full_name,description', 'yearbook:id,graduating_year'])
+                ->where('department_template_id', $baseDepartmentTemplateId)
                 ->orderBy('yearbook_id')
-                ->get(['id', 'label', 'full_name', 'yearbook_id'])
+                ->get(['id', 'department_template_id', 'yearbook_id'])
                 ->map(fn (Department $department) => [
                     'id' => $department->id,
                     'label' => $department->label,
@@ -358,6 +360,7 @@ class RegistrationLinkController extends Controller
                 'id' => $link->department->id,
                 'label' => $link->department->label,
                 'full_name' => $link->department->full_name,
+                'department_template_id' => $link->department->department_template_id,
                 'yearbook_id' => $link->department->yearbook_id,
                 'graduating_year' => $link->department->yearbook?->graduating_year,
             ] : null,

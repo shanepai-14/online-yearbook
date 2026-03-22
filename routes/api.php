@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\StudentController as AdminStudentController;
 use App\Http\Controllers\Api\Admin\YearbookController as AdminYearbookController;
 use App\Http\Controllers\Api\Admin\SchoolSettingController as AdminSchoolSettingController;
 use App\Http\Controllers\Api\Admin\RegistrationLinkController as AdminRegistrationLinkController;
+use App\Http\Controllers\Api\Admin\ReferenceDataController as AdminReferenceDataController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\RegistrationLinkController as PublicRegistrationLinkController;
@@ -56,6 +57,7 @@ Route::middleware('web')->group(function () {
         ->prefix('admin')
         ->group(function () {
             Route::get('/students', [AdminStudentController::class, 'index']);
+            Route::put('/students/{student}', [AdminStudentController::class, 'update'])->whereNumber('student');
             Route::patch('/students/{student}/status', [AdminStudentController::class, 'updateStatus'])->whereNumber('student');
             Route::get('/yearbooks', [AdminYearbookController::class, 'index']);
             Route::post('/yearbooks', [AdminYearbookController::class, 'store']);
@@ -89,5 +91,16 @@ Route::middleware('web')->group(function () {
             Route::get('/registration-links/{registrationLink}', [AdminRegistrationLinkController::class, 'show'])->whereNumber('registrationLink');
             Route::put('/registration-links/{registrationLink}', [AdminRegistrationLinkController::class, 'update'])->whereNumber('registrationLink');
             Route::patch('/registration-links/{registrationLink}/toggle', [AdminRegistrationLinkController::class, 'toggle'])->whereNumber('registrationLink');
+            Route::get('/reference-data', [AdminReferenceDataController::class, 'index']);
+            Route::post('/reference-data/department-templates', [AdminReferenceDataController::class, 'storeDepartmentTemplate']);
+            Route::put('/reference-data/department-templates/{departmentTemplate}', [AdminReferenceDataController::class, 'updateDepartmentTemplate'])
+                ->whereNumber('departmentTemplate');
+            Route::delete('/reference-data/department-templates/{departmentTemplate}', [AdminReferenceDataController::class, 'destroyDepartmentTemplate'])
+                ->whereNumber('departmentTemplate');
+            Route::post('/reference-data/faculty-roles', [AdminReferenceDataController::class, 'storeFacultyRole']);
+            Route::put('/reference-data/faculty-roles/{facultyRole}', [AdminReferenceDataController::class, 'updateFacultyRole'])
+                ->whereNumber('facultyRole');
+            Route::delete('/reference-data/faculty-roles/{facultyRole}', [AdminReferenceDataController::class, 'destroyFacultyRole'])
+                ->whereNumber('facultyRole');
         });
 });

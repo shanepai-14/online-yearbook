@@ -14,6 +14,7 @@ class Faculty extends Model
 
     protected $fillable = [
         'department_id',
+        'faculty_role_id',
         'name',
         'role',
         'photo',
@@ -22,5 +23,10 @@ class Faculty extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function facultyRole(): BelongsTo
+    {
+        return $this->belongsTo(FacultyRole::class);
     }
 }
