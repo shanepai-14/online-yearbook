@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
-import { Heart } from 'lucide-react';
+import { Heart, Menu, X } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -347,6 +347,7 @@ export default function GraduatesYearPage() {
     const [activeDept, setActiveDept] = useState('');
     const [search, setSearch] = useState('');
     const [viewMode, setViewMode] = useState('default');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [reactionsByKey, setReactionsByKey] = useState({});
     const [reactionLoadingByKey, setReactionLoadingByKey] = useState({});
     const [modalState, setModalState] = useState({
@@ -406,6 +407,10 @@ export default function GraduatesYearPage() {
             open: false,
         }));
     }, [year, activeDept, search, viewMode]);
+
+    useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [year, viewMode, activeDept]);
 
     useEffect(() => {
         if (!yearbook) {
@@ -632,20 +637,20 @@ export default function GraduatesYearPage() {
                 style={{ background: palette.navy, borderColor: palette.goldDark }}
             >
                 <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
-                    <div className="flex min-w-0 items-center gap-3">
+                    <Link to="/yearbook" className="flex min-w-0 items-center gap-3">
                         <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-white">
                             <DVCLogo />
                         </div>
                         <span
-                            className="hidden text-xs uppercase tracking-[0.2em] sm:inline"
+                            className="hidden truncate text-xs uppercase tracking-[0.2em] sm:inline"
                             style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.gold }}
                         >
                             {schoolName} · Yearbook {yearbook.graduating_year}
                         </span>
-                    </div>
+                    </Link>
 
                     <div
-                        className="flex items-center rounded-full border p-0.5"
+                        className="hidden items-center rounded-full border p-0.5 sm:flex"
                         style={{
                             borderColor: `${palette.goldDark}88`,
                             background: 'rgba(255,255,255,0.06)',
@@ -677,30 +682,138 @@ export default function GraduatesYearPage() {
                         </button>
                     </div>
 
-                    {viewMode === 'default' ? (
-                        <input
-                            type="text"
-                            placeholder="Search students..."
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            className="w-44 rounded px-3 py-1.5 text-xs focus:outline-none sm:w-52"
+                    <div className="hidden items-center gap-2 sm:flex">
+                        {viewMode === 'default' ? (
+                            <input
+                                type="text"
+                                placeholder="Search students..."
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                className="w-44 rounded px-3 py-1.5 text-xs focus:outline-none sm:w-52"
+                                style={{
+                                    fontFamily: "'Helvetica Neue', sans-serif",
+                                    background: 'rgba(255,255,255,0.06)',
+                                    border: `0.5px solid ${palette.goldDark}66`,
+                                    color: '#e8e4d4',
+                                }}
+                            />
+                        ) : (
+                            <div
+                                className="text-[11px] uppercase tracking-[0.16em]"
+                                style={{ fontFamily: "'Helvetica Neue', sans-serif", color: '#e8e4d4a8' }}
+                            >
+                                Book Mode
+                            </div>
+                        )}
+
+                        <Link
+                            to="/yearbook/login"
+                            className="rounded border px-3 py-1.5 text-xs uppercase tracking-[0.15em] transition"
                             style={{
                                 fontFamily: "'Helvetica Neue', sans-serif",
-                                background: 'rgba(255,255,255,0.06)',
-                                border: `0.5px solid ${palette.goldDark}66`,
+                                borderColor: `${palette.goldDark}66`,
                                 color: '#e8e4d4',
+                                background: 'rgba(255,255,255,0.06)',
                             }}
-                        />
-                    ) : (
-                        <div
-                            className="hidden text-[11px] uppercase tracking-[0.16em] sm:block"
-                            style={{ fontFamily: "'Helvetica Neue', sans-serif", color: '#e8e4d4a8' }}
                         >
-                            Book Mode
-                        </div>
-                    )}
+                            Login
+                        </Link>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setMobileMenuOpen((current) => !current)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded border sm:hidden"
+                        style={{
+                            borderColor: `${palette.goldDark}66`,
+                            color: '#e8e4d4',
+                            background: 'rgba(255,255,255,0.06)',
+                        }}
+                        aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                    >
+                        {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                    </button>
                 </div>
             </nav>
+
+            {mobileMenuOpen ? (
+                <div
+                    className="border-b-2 px-4 py-3 sm:hidden"
+                    style={{ background: palette.navy, borderColor: palette.goldDark }}
+                >
+                    <div className="space-y-3">
+                        <div
+                            className="flex items-center rounded-full border p-0.5"
+                            style={{
+                                borderColor: `${palette.goldDark}88`,
+                                background: 'rgba(255,255,255,0.06)',
+                            }}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('default')}
+                                className="flex-1 rounded-full px-3 py-1.5 text-xs transition"
+                                style={{
+                                    fontFamily: "'Helvetica Neue', sans-serif",
+                                    background: viewMode === 'default' ? palette.gold : 'transparent',
+                                    color: viewMode === 'default' ? palette.navy : '#e8e4d4',
+                                }}
+                            >
+                                ⊞ Default
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('book')}
+                                className="flex-1 rounded-full px-3 py-1.5 text-xs transition"
+                                style={{
+                                    fontFamily: "'Helvetica Neue', sans-serif",
+                                    background: viewMode === 'book' ? palette.gold : 'transparent',
+                                    color: viewMode === 'book' ? palette.navy : '#e8e4d4',
+                                }}
+                            >
+                                📖 Book
+                            </button>
+                        </div>
+
+                        {viewMode === 'default' ? (
+                            <input
+                                type="text"
+                                placeholder="Search students..."
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                className="h-10 w-full rounded px-3 text-xs focus:outline-none"
+                                style={{
+                                    fontFamily: "'Helvetica Neue', sans-serif",
+                                    background: 'rgba(255,255,255,0.06)',
+                                    border: `0.5px solid ${palette.goldDark}66`,
+                                    color: '#e8e4d4',
+                                }}
+                            />
+                        ) : (
+                            <div
+                                className="text-[11px] uppercase tracking-[0.16em]"
+                                style={{ fontFamily: "'Helvetica Neue', sans-serif", color: '#e8e4d4a8' }}
+                            >
+                                Book Mode
+                            </div>
+                        )}
+
+                        <Link
+                            to="/yearbook/login"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-10 items-center justify-center rounded border text-xs uppercase tracking-[0.15em] transition"
+                            style={{
+                                fontFamily: "'Helvetica Neue', sans-serif",
+                                borderColor: `${palette.goldDark}66`,
+                                color: '#e8e4d4',
+                                background: 'rgba(255,255,255,0.06)',
+                            }}
+                        >
+                            Login
+                        </Link>
+                    </div>
+                </div>
+            ) : null}
 
             {viewMode === 'default' ? (
                 <>
