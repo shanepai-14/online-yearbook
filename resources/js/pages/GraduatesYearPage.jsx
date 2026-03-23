@@ -6,24 +6,18 @@ import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import BookView from '@/components/yearbook/BookView';
 import CardModal from '@/components/yearbook/CardModal';
+import {
+    getFacultyPlaceholder,
+    getStudentPlaceholder,
+    resolveFacultyPhoto,
+    resolveStudentPhoto,
+} from '@/lib/placeholders';
 import { yearbookPalette as palette } from '@/lib/theme';
 
-const FACULTY_PLACEHOLDER = 'https://via.placeholder.com/120';
-const STUDENT_PLACEHOLDER = 'https://via.placeholder.com/160';
 const GROUP_PHOTO_PLACEHOLDER = 'https://via.placeholder.com/1200x720?text=Department+Group+Photo';
 
 function reactionKey(type, id) {
     return `${type}:${id}`;
-}
-
-function photoOrPlaceholder(photo, placeholder) {
-    if (typeof photo !== 'string') {
-        return placeholder;
-    }
-
-    const trimmed = photo.trim();
-
-    return trimmed !== '' ? trimmed : placeholder;
 }
 
 const DVCLogo = () => (
@@ -93,6 +87,7 @@ function FacultyCard({ faculty, alignment = 'left', reaction, onClick }) {
         alignment === 'center' ? 'text-center' : alignment === 'right' ? 'text-right' : 'text-left';
     const heartCount = Number(reaction?.total ?? faculty.reaction_count ?? 0);
     const isReacted = Boolean(reaction?.reacted ?? faculty.reacted_by_viewer);
+    const facultySeed = faculty?.id ?? faculty?.name ?? '';
 
     return (
         <button
@@ -103,12 +98,12 @@ function FacultyCard({ faculty, alignment = 'left', reaction, onClick }) {
         >
             <div className="relative w-full overflow-hidden bg-gray-100" style={{ aspectRatio: '1 / 1' }}>
                 <img
-                    src={photoOrPlaceholder(faculty.photo, FACULTY_PLACEHOLDER)}
+                    src={resolveFacultyPhoto(faculty.photo, facultySeed)}
                     alt={faculty.name}
                     className="h-full w-full object-cover grayscale-[20%] transition-all duration-300 group-hover:grayscale-0"
                     onError={(event) => {
                         event.currentTarget.onerror = null;
-                        event.currentTarget.src = FACULTY_PLACEHOLDER;
+                        event.currentTarget.src = getFacultyPlaceholder(facultySeed);
                     }}
                 />
                 <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] text-white">
@@ -150,12 +145,12 @@ function StudentCard({ student, alignment = 'left', reaction, onClick }) {
         >
             <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3 / 4', background: '#e8eaf2' }}>
                 <img
-                    src={photoOrPlaceholder(student.photo, STUDENT_PLACEHOLDER)}
+                    src={resolveStudentPhoto(student.photo, student.gender)}
                     alt={student.name}
                     className="h-full w-full object-cover grayscale-[10%] transition-all duration-300 group-hover:grayscale-0"
                     onError={(event) => {
                         event.currentTarget.onerror = null;
-                        event.currentTarget.src = STUDENT_PLACEHOLDER;
+                        event.currentTarget.src = getStudentPlaceholder(student.gender);
                     }}
                 />
                 <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] text-white">

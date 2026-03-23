@@ -7,6 +7,7 @@ import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import StudentCard from '@/components/yearbook/StudentCard';
+import { STUDENT_GENDER_OPTIONS } from '@/lib/placeholders';
 import { yearbookPalette as palette } from '@/lib/theme';
 
 function ProfileStatusBadge({ completed }) {
@@ -62,6 +63,7 @@ export default function AdminStudentsPage() {
         password_confirmation: '',
         yearbook_id: '',
         department_id: '',
+        gender: '',
         motto: '',
         badge: '',
         photo: '',
@@ -155,11 +157,12 @@ export default function AdminStudentsPage() {
     const previewStudentCard = useMemo(
         () => ({
             name: editForm.name,
+            gender: editForm.gender,
             photo: editPhotoPreview,
             motto: editForm.motto,
             badge: editForm.badge,
         }),
-        [editForm.badge, editForm.motto, editForm.name, editPhotoPreview],
+        [editForm.badge, editForm.gender, editForm.motto, editForm.name, editPhotoPreview],
     );
 
     const handleToggleStatus = async (student) => {
@@ -206,6 +209,7 @@ export default function AdminStudentsPage() {
             password_confirmation: '',
             yearbook_id: student.yearbook_id ? String(student.yearbook_id) : '',
             department_id: student.department_id ? String(student.department_id) : '',
+            gender: student.gender ?? '',
             motto: student.motto ?? '',
             badge: student.badge ?? '',
             photo: student.photo ?? '',
@@ -256,6 +260,7 @@ export default function AdminStudentsPage() {
         payload.append('email', editForm.email);
         payload.append('yearbook_id', String(editForm.yearbook_id || ''));
         payload.append('department_id', String(editForm.department_id || ''));
+        payload.append('gender', editForm.gender || '');
         payload.append('motto', editForm.motto);
         payload.append('badge', editForm.badge);
         payload.append('photo', editForm.photo);
@@ -615,6 +620,23 @@ export default function AdminStudentsPage() {
                                         ))}
                                     </select>
                                 </div>
+                            </div>
+
+                            <div className="space-y-2 md:max-w-xs">
+                                <Label htmlFor="edit_student_gender">Gender</Label>
+                                <select
+                                    id="edit_student_gender"
+                                    value={editForm.gender}
+                                    onChange={(event) => updateEditField('gender', event.target.value)}
+                                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                                >
+                                    <option value="">Prefer not to say</option>
+                                    {STUDENT_GENDER_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-2">

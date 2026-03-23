@@ -1,25 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 
+import {
+    getFacultyPlaceholder,
+    getStudentPlaceholder,
+    resolveFacultyPhoto,
+    resolveStudentPhoto,
+} from '@/lib/placeholders';
 import { yearbookPalette as palette } from '@/lib/theme';
 import { cn } from '@/lib/utils';
-
-const FACULTY_PLACEHOLDER = 'https://placehold.co/320x320';
-const STUDENT_PLACEHOLDER = 'https://placehold.co/360x480';
 
 const SPINE_WIDTH = 18;
 const FLIP_DURATION_MS = 600;
 const DRAG_FLIP_THRESHOLD = 60;
-
-function photoOrPlaceholder(photo, placeholder) {
-    if (typeof photo !== 'string') {
-        return placeholder;
-    }
-
-    const trimmed = photo.trim();
-
-    return trimmed !== '' ? trimmed : placeholder;
-}
 
 function isInteractiveTarget(target) {
     if (!(target instanceof Element)) {
@@ -172,6 +165,8 @@ function buildDepartmentSpreads({ department, schoolName, graduatingYear, search
 }
 
 function FacultyCell({ item, onOpenCard }) {
+    const facultySeed = item?.id ?? item?.name ?? '';
+
     return (
         <button
             type="button"
@@ -180,13 +175,13 @@ function FacultyCell({ item, onOpenCard }) {
         >
             <div className="aspect-square overflow-hidden bg-slate-100">
                 <img
-                    src={photoOrPlaceholder(item.photo, FACULTY_PLACEHOLDER)}
+                    src={resolveFacultyPhoto(item.photo, facultySeed)}
                     alt={item.name}
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                     style={{ filter: 'sepia(10%) grayscale(10%)' }}
                     onError={(event) => {
                         event.currentTarget.onerror = null;
-                        event.currentTarget.src = FACULTY_PLACEHOLDER;
+                        event.currentTarget.src = getFacultyPlaceholder(facultySeed);
                     }}
                 />
             </div>
@@ -216,12 +211,12 @@ function StudentCell({ item, onOpenCard }) {
         >
             <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3 / 4', background: '#e8eaf2' }}>
                 <img
-                    src={photoOrPlaceholder(item.photo, STUDENT_PLACEHOLDER)}
+                    src={resolveStudentPhoto(item.photo, item.gender)}
                     alt={item.name}
                     className="h-full w-full object-cover grayscale-[10%] transition-all duration-300 group-hover:grayscale-0"
                     onError={(event) => {
                         event.currentTarget.onerror = null;
-                        event.currentTarget.src = STUDENT_PLACEHOLDER;
+                        event.currentTarget.src = getStudentPlaceholder(item.gender);
                     }}
                 />
                 <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] text-white">

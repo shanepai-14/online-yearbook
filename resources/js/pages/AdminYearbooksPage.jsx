@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { getFacultyPlaceholder, resolveFacultyPhoto } from '@/lib/placeholders';
 import { yearbookPalette as palette } from '@/lib/theme';
 
 const EMPTY_YEARBOOK_FORM = {
@@ -52,19 +53,11 @@ const EMPTY_FACULTY_ROLE_FORM = {
     name: '',
 };
 
-const FACULTY_PLACEHOLDER = 'https://via.placeholder.com/300x300?text=Faculty';
-
 const facultyUploadInputClassName =
     'cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white';
 
-function photoOrPlaceholder(photo, placeholder = FACULTY_PLACEHOLDER) {
-    if (typeof photo !== 'string') {
-        return placeholder;
-    }
-
-    const trimmed = photo.trim();
-
-    return trimmed !== '' ? trimmed : placeholder;
+function photoOrPlaceholder(photo, seed = '') {
+    return resolveFacultyPhoto(photo, seed);
 }
 
 function FacultyPreviewCard({ name, role, photo, photoFile = null }) {
@@ -84,7 +77,8 @@ function FacultyPreviewCard({ name, role, photo, photoFile = null }) {
         };
     }, [photoFile]);
 
-    const displayPhoto = localPreviewUrl || photoOrPlaceholder(photo, FACULTY_PLACEHOLDER);
+    const previewSeed = name || role || 'faculty-preview';
+    const displayPhoto = localPreviewUrl || photoOrPlaceholder(photo, previewSeed);
 
     return (
         <div
@@ -98,7 +92,7 @@ function FacultyPreviewCard({ name, role, photo, photoFile = null }) {
                     className="h-full w-full object-cover grayscale-[20%] transition-all duration-300 group-hover:grayscale-0"
                     onError={(event) => {
                         event.currentTarget.onerror = null;
-                        event.currentTarget.src = FACULTY_PLACEHOLDER;
+                        event.currentTarget.src = getFacultyPlaceholder(previewSeed);
                     }}
                 />
             </div>

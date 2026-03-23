@@ -3,25 +3,35 @@ import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, MessageCir
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
+import {
+    getFacultyPlaceholder,
+    getStudentPlaceholder,
+    resolveFacultyPhoto,
+    resolveStudentPhoto,
+} from '@/lib/placeholders';
 import { cn } from '@/lib/utils';
 
 import CommentSection from '@/components/yearbook/CommentSection';
 import ReactionButton from '@/components/yearbook/ReactionButton';
 import SwipeViewer from '@/components/yearbook/SwipeViewer';
 
-const FACULTY_PLACEHOLDER = 'https://via.placeholder.com/720x720?text=Faculty';
-const STUDENT_PLACEHOLDER = 'https://via.placeholder.com/720x960?text=Student';
 const CARD_OVERLAY_GOLD = 'rgba(232,217,138,0.9)';
 const CARD_OVERLAY_GOLD_SOFT = 'rgba(232,217,138,0.85)';
 
-function photoOrPlaceholder(photo, placeholder) {
-    if (typeof photo !== 'string') {
-        return placeholder;
+function fallbackPlaceholder(type, item) {
+    if (type === 'student') {
+        return getStudentPlaceholder(item?.gender);
     }
 
-    const trimmed = photo.trim();
+    return getFacultyPlaceholder(item?.id ?? item?.name ?? '');
+}
 
-    return trimmed !== '' ? trimmed : placeholder;
+function photoOrPlaceholder(type, item) {
+    if (type === 'student') {
+        return resolveStudentPhoto(item?.photo, item?.gender);
+    }
+
+    return resolveFacultyPhoto(item?.photo, item?.id ?? item?.name ?? '');
 }
 
 function clamp(value, min, max) {
@@ -107,7 +117,6 @@ function CardDetailPanel({
         alignment === 'center' ? 'text-center' : alignment === 'right' ? 'text-right' : 'text-left';
     const actionAlignClass =
         alignment === 'center' ? 'justify-center' : alignment === 'right' ? 'justify-end' : 'justify-start';
-    const placeholder = type === 'student' ? STUDENT_PLACEHOLDER : FACULTY_PLACEHOLDER;
     const [shareFeedback, setShareFeedback] = useState('');
     const [downloadFeedback, setDownloadFeedback] = useState('');
 
@@ -183,7 +192,7 @@ function CardDetailPanel({
     const downloadLabel = downloadFeedback === 'saved' ? 'Saved' : downloadFeedback === 'opened' ? 'Opened' : 'Download';
 
 const handleDownload = async () => {
-    const sourceUrl = photoOrPlaceholder(item.photo, placeholder);
+    const sourceUrl = photoOrPlaceholder(type, item);
     const fileBase = sanitizeFileName(item.name) || 'profile';
     const fileName = `${fileBase}-${type}-card.png`;
 
@@ -363,7 +372,7 @@ const handleDownload = async () => {
     >
         {/* Image — defines the cell size, capped to the viewport */}
         <img
-            src={photoOrPlaceholder(item.photo, placeholder)}
+            src={photoOrPlaceholder(type, item)}
             alt={item.name}
             loading="lazy"
             className="block object-contain"
@@ -376,7 +385,7 @@ const handleDownload = async () => {
             }}
             onError={(event) => {
                 event.currentTarget.onerror = null;
-                event.currentTarget.src = placeholder;
+                event.currentTarget.src = fallbackPlaceholder(type, item);
             }}
         />
 

@@ -16,6 +16,7 @@ class Student extends Model
         'department_id',
         'yearbook_id',
         'name',
+        'gender',
         'photo',
         'motto',
         'badge',

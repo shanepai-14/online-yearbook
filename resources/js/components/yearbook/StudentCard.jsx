@@ -1,17 +1,6 @@
 import { yearbookPalette as palette } from '@/lib/theme';
 import { cn } from '@/lib/utils';
-
-const STUDENT_PLACEHOLDER = 'https://via.placeholder.com/360x480?text=Student';
-
-function photoOrPlaceholder(photo) {
-    if (typeof photo !== 'string') {
-        return STUDENT_PLACEHOLDER;
-    }
-
-    const trimmed = photo.trim();
-
-    return trimmed !== '' ? trimmed : STUDENT_PLACEHOLDER;
-}
+import { getStudentPlaceholder, resolveStudentPhoto } from '@/lib/placeholders';
 
 function withHexAlpha(color, alphaHex = 'eb') {
     if (typeof color !== 'string') {
@@ -61,12 +50,12 @@ export default function StudentCard({
             >
                 <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3 / 4', background: '#e8eaf2' }}>
                     <img
-                        src={photoOrPlaceholder(student?.photo)}
+                        src={resolveStudentPhoto(student?.photo, student?.gender)}
                         alt={student?.name || 'Student'}
                         className="h-full w-full object-cover grayscale-[10%] transition-all duration-300 group-hover:grayscale-0"
                         onError={(event) => {
                             event.currentTarget.onerror = null;
-                            event.currentTarget.src = STUDENT_PLACEHOLDER;
+                            event.currentTarget.src = getStudentPlaceholder(student?.gender);
                         }}
                     />
 
@@ -120,12 +109,12 @@ export default function StudentCard({
         >
             <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3 / 4', background: '#e8eaf2' }}>
                 <img
-                    src={photoOrPlaceholder(student?.photo)}
+                    src={resolveStudentPhoto(student?.photo, student?.gender)}
                     alt={student?.name || 'Student'}
                     className="h-full w-full object-cover grayscale-[10%] transition-all duration-300 group-hover:grayscale-0"
                     onError={(event) => {
                         event.currentTarget.onerror = null;
-                        event.currentTarget.src = STUDENT_PLACEHOLDER;
+                        event.currentTarget.src = getStudentPlaceholder(student?.gender);
                     }}
                 />
 
