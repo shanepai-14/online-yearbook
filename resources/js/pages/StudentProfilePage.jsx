@@ -341,7 +341,7 @@ export default function StudentProfilePage() {
                                     className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
                                 />
                                 <p className="text-xs text-slate-500">
-                                    Upload JPG/PNG/WebP up to 3MB. This will be used on the public yearbook card.
+                                    Upload JPG/PNG/WebP up to 15MB. This will be used on the public yearbook card.
                                 </p>
                             </div>
                         </div>
