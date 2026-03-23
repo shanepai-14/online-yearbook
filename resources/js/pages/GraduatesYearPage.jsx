@@ -850,7 +850,26 @@ export default function GraduatesYearPage() {
                                 {yearbook.hero_description}
                             </p>
 
-                            <div className={`flex w-full gap-0 overflow-x-auto ${justifyClass}`}>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:hidden">
+                                {stats.map((stat) => (
+                                    <div key={stat[1]} className={textAlignClass}>
+                                        <div className="text-2xl" style={{ color: palette.gold }}>
+                                            {stat[0]}
+                                        </div>
+                                        <div
+                                            className="mt-1 text-xs uppercase tracking-[0.15em]"
+                                            style={{
+                                                fontFamily: "'Helvetica Neue', sans-serif",
+                                                color: 'rgba(255,255,255,0.4)',
+                                            }}
+                                        >
+                                            {stat[1]}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className={`hidden w-full gap-0 overflow-x-auto sm:flex ${justifyClass}`}>
                                 {stats.map((stat, index) => (
                                     <div
                                         key={stat[1]}
