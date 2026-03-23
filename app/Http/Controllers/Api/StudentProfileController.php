@@ -76,7 +76,7 @@ class StudentProfileController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'photo' => ['nullable', 'string', 'max:2048'],
-            'photo_upload' => ['nullable', 'file', 'image', 'max:3072'],
+            'photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
             'motto' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:120'],
             'class_motto' => ['nullable', 'string', 'max:2000'],
@@ -138,9 +138,9 @@ class StudentProfileController extends Controller
     public function uploadDepartmentGroupPhotos(Request $request): JsonResponse
     {
         $request->validate([
-            'department_group_photo_upload' => ['nullable', 'file', 'image', 'max:4096'],
+            'department_group_photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
             'department_group_photo_uploads' => ['nullable', 'array', 'max:10'],
-            'department_group_photo_uploads.*' => ['file', 'image', 'max:4096'],
+            'department_group_photo_uploads.*' => ['file', 'image', 'max:15360'],
         ]);
 
         $profile = $this->resolveProfile($request->user());

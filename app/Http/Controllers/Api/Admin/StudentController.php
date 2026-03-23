@@ -52,7 +52,7 @@ class StudentController extends Controller
             'motto' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:120'],
             'photo' => ['nullable', 'string', 'max:2048'],
-            'photo_upload' => ['nullable', 'file', 'image', 'max:3072'],
+            'photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
             'is_active' => ['required', 'boolean'],
         ]);
 

@@ -658,7 +658,7 @@ export default function AdminStudentsPage() {
                                         className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
                                     />
                                     <p className="truncate text-[11px] text-slate-500">
-                                        {editForm.photo_upload?.name || 'Upload JPG/PNG/WebP (max 3MB).'}
+                                        {editForm.photo_upload?.name || 'Upload JPG/PNG/WebP (max 15MB).'}
                                     </p>
                                 </div>
                                 <div className="space-y-2 md:justify-self-end">

@@ -182,206 +182,277 @@ function CardDetailPanel({
     const shareLabel = shareFeedback === 'copied' ? 'Copied' : shareFeedback === 'shared' ? 'Shared' : 'Share';
     const downloadLabel = downloadFeedback === 'saved' ? 'Saved' : downloadFeedback === 'opened' ? 'Opened' : 'Download';
 
-    const handleDownload = async () => {
-        const sourceUrl = photoOrPlaceholder(item.photo, placeholder);
-        const fileBase = sanitizeFileName(item.name) || 'profile';
-        const fileName = `${fileBase}-${type}-card.png`;
+const handleDownload = async () => {
+    const sourceUrl = photoOrPlaceholder(item.photo, placeholder);
+    const fileBase = sanitizeFileName(item.name) || 'profile';
+    const fileName = `${fileBase}-${type}-card.png`;
 
-        try {
-            const image = await loadImageForCanvas(sourceUrl);
-            const width = image.naturalWidth || image.width || 720;
-            const height = image.naturalHeight || image.height || (type === 'student' ? 960 : 720);
+    try {
+        const image = await loadImageForCanvas(sourceUrl);
+        const width  = image.naturalWidth  || image.width  || 720;
+        const height = image.naturalHeight || image.height || (type === 'student' ? 960 : 720);
 
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
+        const canvas = document.createElement('canvas');
+        canvas.width  = width;
+        canvas.height = height;
 
-            const context = canvas.getContext('2d');
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas context unavailable.');
 
-            if (!context) {
-                throw new Error('Canvas context unavailable.');
+        context.drawImage(image, 0, 0, width, height);
+
+        // ── Sizing constants ─────────────────────────────────────────────
+        const shortSide          = Math.min(width, height);
+        const horizontalPadding  = clamp(shortSide * 0.06, 28, 72);
+        const availableTextWidth = width - horizontalPadding * 2;
+        const textX              = width / 2;
+
+        const nameSize      = clamp(shortSide * 0.038, 18, 36);
+        const subTextSize   = clamp(shortSide * 0.024, 12, 22);
+        const badgeTextSize = clamp(shortSide * 0.016, 10, 16);
+        const lineHeightName = Math.round(nameSize  * 1.2);
+        const lineHeightSub  = Math.round(subTextSize * 1.3);
+        const badgePaddingX  = clamp(shortSide * 0.018, 10, 18);
+        const badgePaddingY  = clamp(shortSide * 0.012,  7, 14);
+        const badgeHeight    = badgeTextSize + badgePaddingY * 2;
+        const badgeGap       = clamp(shortSide * 0.018, 10, 24);
+        const bottomMargin   = clamp(height   * 0.07,  48, 100);
+
+        const nameFont  = `600 ${nameSize}px Georgia, serif`;
+        const subFont   = `400 ${subTextSize}px Georgia, serif`;
+        const roleFont  = `500 ${subTextSize}px "Helvetica Neue", Arial, sans-serif`;
+        const badgeFont = `600 ${badgeTextSize}px "Helvetica Neue", Arial, sans-serif`;
+
+        // ── Dry-run: measure actual wrapped line counts ───────────────────
+        context.textAlign    = 'center';
+        context.textBaseline = 'top';
+
+        function measureLines(text, font, maxW, maxLines) {
+            context.font = font;
+            const words = String(text || '').split(/\s+/).filter(Boolean);
+            const lines  = [];
+            let cur = '';
+            words.forEach((w) => {
+                const test = cur ? `${cur} ${w}` : w;
+                if (context.measureText(test).width > maxW && cur) {
+                    lines.push(cur);
+                    cur = w;
+                } else {
+                    cur = test;
+                }
+            });
+            if (cur) lines.push(cur);
+            return Math.min(lines.length, Math.max(1, maxLines));
+        }
+
+        let blockHeight = measureLines(item.name, nameFont, availableTextWidth, 2) * lineHeightName;
+
+        if (type === 'student') {
+            if (item.motto) {
+                blockHeight += Math.round(subTextSize * 0.2);
+                blockHeight += measureLines(`"${item.motto}"`, subFont, availableTextWidth, 3) * lineHeightSub;
             }
+            if (item.badge) {
+                blockHeight += badgeGap + badgeHeight;
+            }
+        } else if (item.role) {
+            blockHeight += Math.round(subTextSize * 0.2);
+            blockHeight += measureLines(item.role, roleFont, availableTextWidth, 2) * lineHeightSub;
+        }
 
-            context.drawImage(image, 0, 0, width, height);
+        // ── cursorY anchored to bottom ────────────────────────────────────
+        const cursorYStart = height - bottomMargin - blockHeight;
 
-            const overlayHeight = Math.round(height * 0.42);
-            const overlayTop = height - overlayHeight;
-            const horizontalPadding = clamp(width * 0.05, 22, 54);
-            const availableTextWidth = width - horizontalPadding * 2;
-            const textX = alignment === 'left' ? horizontalPadding : alignment === 'right' ? width - horizontalPadding : width / 2;
-            const textAlign = alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center';
+        // ── Gradient: anchored just above the text block ──────────────────
+        const gradientBuffer = clamp(height * 0.22, 120, 320);
+        const gradientTop    = Math.max(0, cursorYStart - gradientBuffer);
 
-            const gradient = context.createLinearGradient(0, overlayTop, 0, height);
-            gradient.addColorStop(0, 'rgba(26,42,108,0)');
-            gradient.addColorStop(0.45, 'rgba(26,42,108,0.66)');
-            gradient.addColorStop(1, 'rgba(26,42,108,0.94)');
-            context.fillStyle = gradient;
-            context.fillRect(0, overlayTop, width, overlayHeight);
+        const gradient = context.createLinearGradient(0, gradientTop, 0, height);
+        gradient.addColorStop(0,    'rgba(26,42,108,0)');
+        gradient.addColorStop(0.25, 'rgba(26,42,108,0.35)');
+        gradient.addColorStop(0.6,  'rgba(26,42,108,0.75)');
+        gradient.addColorStop(1,    'rgba(26,42,108,0.96)');
+        context.fillStyle = gradient;
+        context.fillRect(0, gradientTop, width, height - gradientTop);
 
-            context.textAlign = textAlign;
-            context.textBaseline = 'top';
+        // ── Draw pass ─────────────────────────────────────────────────────
+        let cursorY = cursorYStart;
 
-            const nameSize = clamp(width * 0.05, 24, 48);
-            const subTextSize = clamp(width * 0.031, 16, 30);
-            const badgeTextSize = clamp(width * 0.02, 11, 19);
-            let cursorY = overlayTop + clamp(overlayHeight * 0.2, 20, 70);
+        context.fillStyle = '#ffffff';
+        context.font      = nameFont;
+        cursorY = drawWrappedText(context, item.name, textX, cursorY, availableTextWidth, lineHeightName, 2);
 
-            context.fillStyle = '#ffffff';
-            context.font = `600 ${nameSize}px Georgia, serif`;
-            cursorY = drawWrappedText(
-                context,
-                item.name,
-                textX,
-                cursorY,
-                availableTextWidth,
-                Math.round(nameSize * 1.18),
-                2,
-            );
-
-            context.font = `400 ${subTextSize}px Georgia, serif`;
-
-            if (type === 'student') {
-                if (item.motto) {
-                    context.fillStyle = CARD_OVERLAY_GOLD_SOFT;
-                    cursorY += Math.round(subTextSize * 0.2);
-                    cursorY = drawWrappedText(
-                        context,
-                        `"${item.motto}"`,
-                        textX,
-                        cursorY,
-                        availableTextWidth,
-                        Math.round(subTextSize * 1.25),
-                        3,
-                    );
-                }
-
-                if (item.badge) {
-                    const badgeText = String(item.badge).toUpperCase();
-                    context.font = `600 ${badgeTextSize}px "Helvetica Neue", Arial, sans-serif`;
-                    const badgeTextWidth = context.measureText(badgeText).width;
-                    const badgePaddingX = clamp(width * 0.015, 8, 14);
-                    const badgePaddingY = clamp(height * 0.0075, 5, 10);
-                    const badgeWidth = badgeTextWidth + badgePaddingX * 2;
-                    const badgeHeight = badgeTextSize + badgePaddingY * 2;
-                    const badgeY = cursorY + clamp(height * 0.012, 8, 18);
-                    const badgeX = alignment === 'left' ? textX : alignment === 'right' ? textX - badgeWidth : textX - badgeWidth / 2;
-
-                    context.strokeStyle = CARD_OVERLAY_GOLD;
-                    context.lineWidth = Math.max(1, Math.round(width * 0.002));
-                    context.strokeRect(badgeX, badgeY, badgeWidth, badgeHeight);
-                    context.fillStyle = CARD_OVERLAY_GOLD;
-                    context.textAlign = 'left';
-                    context.fillText(badgeText, badgeX + badgePaddingX, badgeY + badgePaddingY);
-                    context.textAlign = textAlign;
-                }
-            } else if (item.role) {
-                context.fillStyle = CARD_OVERLAY_GOLD;
-                context.font = `500 ${subTextSize}px "Helvetica Neue", Arial, sans-serif`;
+        if (type === 'student') {
+            if (item.motto) {
+                context.fillStyle = CARD_OVERLAY_GOLD_SOFT;
+                context.font      = subFont;
                 cursorY += Math.round(subTextSize * 0.2);
-                drawWrappedText(
+                cursorY = drawWrappedText(
                     context,
-                    item.role,
+                    `"${item.motto}"`,
                     textX,
                     cursorY,
                     availableTextWidth,
-                    Math.round(subTextSize * 1.25),
-                    2,
+                    lineHeightSub,
+                    3,
                 );
             }
 
-            const outputUrl = canvas.toDataURL('image/png');
-            triggerDownload(outputUrl, fileName);
-            setDownloadFeedback('saved');
-            return;
-        } catch (_error) {
-            // If browser blocks canvas export (CORS), fallback to direct image download/open.
+            if (item.badge) {
+                const badgeText      = String(item.badge).toUpperCase();
+                context.font         = badgeFont;
+                const badgeTextWidth = context.measureText(badgeText).width;
+                const badgeWidth     = badgeTextWidth + badgePaddingX * 2;
+                const badgeY         = cursorY + badgeGap;
+                const badgeX         = textX - badgeWidth / 2;
+
+                context.strokeStyle = CARD_OVERLAY_GOLD;
+                context.lineWidth   = Math.max(1, Math.round(width * 0.002));
+                context.strokeRect(badgeX, badgeY, badgeWidth, badgeHeight);
+                context.fillStyle = CARD_OVERLAY_GOLD;
+                context.fillText(badgeText, textX, badgeY + badgePaddingY);
+            }
+        } else if (item.role) {
+            context.fillStyle = CARD_OVERLAY_GOLD;
+            context.font      = roleFont;
+            cursorY += Math.round(subTextSize * 0.2);
+            drawWrappedText(context, item.role, textX, cursorY, availableTextWidth, lineHeightSub, 2);
         }
 
-        try {
-            triggerDownload(sourceUrl, fileName);
-            setDownloadFeedback('opened');
-        } catch (_error) {
-            window.open(sourceUrl, '_blank', 'noopener,noreferrer');
-            setDownloadFeedback('opened');
-        }
-    };
+        const outputUrl = canvas.toDataURL('image/png');
+        triggerDownload(outputUrl, fileName);
+        setDownloadFeedback('saved');
+        return;
+    } catch (_error) {
+        // CORS fallback
+    }
+
+    try {
+        triggerDownload(sourceUrl, fileName);
+        setDownloadFeedback('opened');
+    } catch (_error) {
+        window.open(sourceUrl, '_blank', 'noopener,noreferrer');
+        setDownloadFeedback('opened');
+    }
+};
 
     return (
         <article className="flex h-full w-full flex-col md:flex-row">
             <div className="group relative h-[52dvh] w-full bg-black md:h-full md:flex-1">
-                <div className="absolute inset-0 flex items-center justify-center p-2 md:p-4">
-                    <div className="relative inline-flex max-h-full max-w-full overflow-hidden">
-                        <img
-                            src={photoOrPlaceholder(item.photo, placeholder)}
-                            alt={item.name}
-                            loading="lazy"
-                            className="block max-h-full max-w-full object-contain"
-                            onError={(event) => {
-                                event.currentTarget.onerror = null;
-                                event.currentTarget.src = placeholder;
-                            }}
-                        />
 
+
+<div className="absolute inset-0 flex items-center justify-center p-2 md:p-4">
+    {/* 
+      Grid trick: a 1×1 grid where every child occupies the same cell.
+      The <img> sizes the cell; the overlay layers are clamped to it.
+      overflow-hidden clips anything that would escape the image bounds.
+      max-h is capped to the viewport so tall images never push the
+      bottom off-screen (mirrors Facebook's lightbox behaviour).
+    */}
+    <div
+        className="relative grid overflow-hidden"
+        style={{
+            gridTemplateAreas: "'stack'",
+            gridTemplateRows: "1fr",
+            gridTemplateColumns: "1fr",
+            maxWidth: "100%",
+            maxHeight: "min(100%, 85dvh)",
+            width: "auto",
+            height: "auto",
+        }}
+    >
+        {/* Image — defines the cell size, capped to the viewport */}
+        <img
+            src={photoOrPlaceholder(item.photo, placeholder)}
+            alt={item.name}
+            loading="lazy"
+            className="block object-contain"
+            style={{
+                gridArea: "stack",
+                maxWidth: "100%",
+                maxHeight: "min(100%, 85dvh)",
+                width: "auto",
+                height: "auto",
+            }}
+            onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = placeholder;
+            }}
+        />
+
+        {/* Gradient overlay — now constrained to the image cell */}
+        <div
+            className="pointer-events-none h-[45%] self-end transition-all duration-300 md:group-hover:translate-y-2 md:group-hover:opacity-0"
+            style={{
+                gridArea: "stack",
+                background: "linear-gradient(to top, #1a2a6ceb, #1a2a6ca8 45%, transparent)",
+                zIndex: 1,
+            }}
+            aria-hidden="true"
+        />
+
+        {/* Text overlay — sits above gradient via zIndex */}
+        <div
+            className={cn(
+                "pointer-events-none self-end px-4 pb-4",
+                textAlignClass,
+            )}
+            style={{ gridArea: "stack", zIndex: 2 }}
+        >
+            <div
+                className="text-white"
+                style={{
+                    letterSpacing: "0.4px",
+                    fontSize: "clamp(0.95rem, 1.45vw, 1.45rem)",
+                }}
+            >
+                {item.name}
+            </div>
+
+            {type === "student" ? (
+                <>
+                    {item.motto ? (
                         <div
-                            className={cn(
-                                'pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1a2a6ceb] via-[#1a2a6ca8] to-transparent px-4 pb-4 pt-14 transition-all duration-300 md:group-hover:translate-y-2 md:group-hover:opacity-0',
-                                textAlignClass,
-                            )}
+                            className="mt-1 italic leading-snug"
+                            style={{
+                                fontFamily: "Georgia, serif",
+                                color: "rgba(232,217,138,0.85)",
+                                fontSize: "clamp(0.72rem, 1.05vw, 1rem)",
+                            }}
                         >
-                            <div
-                                className="text-white"
-                                style={{
-                                    letterSpacing: '0.4px',
-                                    fontSize: 'clamp(0.95rem, 1.45vw, 1.45rem)',
-                                }}
-                            >
-                                {item.name}
-                            </div>
-
-                            {type === 'student' ? (
-                                <>
-                                    {item.motto ? (
-                                        <div
-                                            className="mt-1 italic leading-snug"
-                                            style={{
-                                                fontFamily: 'Georgia, serif',
-                                                color: 'rgba(232,217,138,0.85)',
-                                                fontSize: 'clamp(0.72rem, 1.05vw, 1rem)',
-                                            }}
-                                        >
-                                            "{item.motto}"
-                                        </div>
-                                    ) : null}
-                                    {item.badge ? (
-                                        <span
-                                            className="mt-2 inline-block border px-2 py-1 uppercase tracking-[0.14em]"
-                                            style={{
-                                                fontFamily: "'Helvetica Neue', sans-serif",
-                                                color: 'rgba(232,217,138,0.9)',
-                                                borderColor: 'rgba(232,217,138,0.9)',
-                                                fontSize: 'clamp(0.52rem, 0.72vw, 0.75rem)',
-                                            }}
-                                        >
-                                            {item.badge}
-                                        </span>
-                                    ) : null}
-                                </>
-                            ) : (
-                                <div
-                                    className="mt-1"
-                                    style={{
-                                        fontFamily: "'Helvetica Neue', sans-serif",
-                                        color: 'rgba(232,217,138,0.9)',
-                                        letterSpacing: '0.08em',
-                                        fontSize: 'clamp(0.68rem, 0.9vw, 0.9rem)',
-                                    }}
-                                >
-                                    {item.role}
-                                </div>
-                            )}
+                            "{item.motto}"
                         </div>
-                    </div>
+                    ) : null}
+                    {item.badge ? (
+                        <span
+                            className="mt-2 inline-block border px-2 py-1 uppercase tracking-[0.14em]"
+                            style={{
+                                fontFamily: "'Helvetica Neue', sans-serif",
+                                color: "rgba(232,217,138,0.9)",
+                                borderColor: "rgba(232,217,138,0.9)",
+                                fontSize: "clamp(0.52rem, 0.72vw, 0.75rem)",
+                            }}
+                        >
+                            {item.badge}
+                        </span>
+                    ) : null}
+                </>
+            ) : (
+                <div
+                    className="mt-1"
+                    style={{
+                        fontFamily: "'Helvetica Neue', sans-serif",
+                        color: "rgba(232,217,138,0.9)",
+                        letterSpacing: "0.08em",
+                        fontSize: "clamp(0.68rem, 0.9vw, 0.9rem)",
+                    }}
+                >
+                    {item.role}
                 </div>
+            )}
+        </div>
+    </div>
+</div>
             </div>
 
             <div className="flex h-[48dvh] w-full flex-col bg-white p-4 md:h-full md:w-[430px] md:p-6">

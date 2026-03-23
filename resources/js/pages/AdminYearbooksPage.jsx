@@ -1510,7 +1510,7 @@ export default function AdminYearbooksPage() {
                                                                         />
                                                                         <div className="flex items-center justify-between gap-2">
                                                                             <p className="truncate text-[11px] text-slate-500">
-                                                                                {newFacultyDraft.photo_upload?.name || 'Upload JPG/PNG/WebP (max 4MB).'}
+                                                                                {newFacultyDraft.photo_upload?.name || 'Upload JPG/PNG/WebP (max 15MB).'}
                                                                             </p>
                                                                             <Button
                                                                                 type="button"

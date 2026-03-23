@@ -185,9 +185,9 @@ class YearbookController extends Controller
     public function uploadDepartmentGroupPhotos(Request $request, Department $department): JsonResponse
     {
         $request->validate([
-            'department_group_photo_upload' => ['nullable', 'file', 'image', 'max:4096'],
+            'department_group_photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
             'department_group_photo_uploads' => ['nullable', 'array', 'max:10'],
-            'department_group_photo_uploads.*' => ['file', 'image', 'max:4096'],
+            'department_group_photo_uploads.*' => ['file', 'image', 'max:15360'],
         ]);
 
         $uploadedCount = $this->appendDepartmentGroupPhotos($department, $request);
@@ -300,7 +300,7 @@ class YearbookController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'faculty_role_id' => ['required', 'integer', Rule::exists('faculty_roles', 'id')],
-            'photo_upload' => ['required', 'file', 'image', 'max:4096'],
+            'photo_upload' => ['required', 'file', 'image', 'max:15360'],
         ]);
 
         $photo = $this->storeUploadedFacultyPhoto($validated['photo_upload']);
@@ -329,7 +329,7 @@ class YearbookController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'faculty_role_id' => ['required', 'integer', Rule::exists('faculty_roles', 'id')],
-            'photo_upload' => ['nullable', 'file', 'image', 'max:4096'],
+            'photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
         ]);
 
         $photo = $faculty->photo;
