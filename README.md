@@ -1,58 +1,206 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Online Yearbook Portal
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel + React SPA for a school yearbook system with public browsing, student self-service, and admin management.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Backend: Laravel 13 (PHP 8.3+)
+- Frontend: React 18 + React Router (SPA)
+- Build tool: Vite
+- Styling: Tailwind CSS + shadcn/ui primitives
+- Database: MySQL (or compatible)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Core Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Public yearbook archive under `/yearbook`
+- Year-based graduates page: `/yearbook/:year` (example: `/yearbook/2023`)
+- Student and faculty interactive cards (modal view, reactions, comments, share, download)
+- Student dashboard/profile editing
+- Admin dashboard with yearbook and student management
+- Admin registration link management (`/yearbook/register/:token`)
+- Guest fun card maker (`/yearbook/fun-card`)
 
-## Learning Laravel
+## Routing
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Public SPA Routes
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- `/yearbook`
+- `/yearbook/:year`
+- `/yearbook/login`
+- `/yearbook/register/:token`
+- `/yearbook/fun-card`
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### Legacy Redirects
 
-## Agentic Development
+- `/` -> `/yearbook`
+- `/graduates/:year` -> `/yearbook/:year`
+- `/login` -> `/yearbook/login`
+- `/register/:token` -> `/yearbook/register/:token`
+- `/fun-card` -> `/yearbook/fun-card`
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Protected SPA Routes
+
+- Student:
+  - `/student`
+  - `/student/profile`
+- Admin:
+  - `/admin`
+  - `/admin/yearbooks`
+  - `/admin/students`
+  - `/admin/registration-links`
+
+## API Overview (`/api`)
+
+### Auth
+
+- `POST /api/login`
+- `POST /api/logout`
+- `GET /api/me`
+
+### Public
+
+- `GET /api/school-setting`
+- `GET /api/yearbooks`
+- `GET /api/yearbooks/{year}`
+- `GET /api/reactions/{type}/{targetId}`
+- `POST /api/reactions/toggle`
+- `GET /api/comments/{type}/{targetId}`
+- `POST /api/comments`
+- `GET /api/registration-links/{token}`
+- `POST /api/register/{token}`
+
+### Student
+
+- `GET /api/student/profile`
+- `POST /api/student/profile`
+- `PUT /api/student/profile`
+- `POST /api/student/profile/department-group-photos`
+- `PATCH /api/student/profile/department-group-photos/reorder`
+- `DELETE /api/student/profile/department-group-photos/{departmentGroupPhoto}`
+
+### Admin
+
+- `GET /api/admin/students`
+- `PUT /api/admin/students/{student}`
+- `PATCH /api/admin/students/{student}/status`
+- `GET /api/admin/yearbooks`
+- `POST /api/admin/yearbooks`
+- `PUT /api/admin/yearbooks/{yearbook}`
+- `DELETE /api/admin/yearbooks/{yearbook}`
+- `POST /api/admin/yearbooks/{yearbook}/departments`
+- `PUT /api/admin/yearbooks/{yearbook}/departments/{department}`
+- `DELETE /api/admin/yearbooks/{yearbook}/departments/{department}`
+- `POST /api/admin/departments/{department}/faculty`
+- `PUT /api/admin/departments/{department}/faculty/{faculty}`
+- `DELETE /api/admin/departments/{department}/faculty/{faculty}`
+- `POST /api/admin/departments/{department}/group-photos`
+- `PATCH /api/admin/departments/{department}/group-photos/reorder`
+- `DELETE /api/admin/departments/{department}/group-photos/{departmentGroupPhoto}`
+- `GET /api/admin/school-setting`
+- `PUT /api/admin/school-setting`
+- `GET /api/admin/registration-links`
+- `POST /api/admin/registration-links`
+- `GET /api/admin/registration-links/{registrationLink}`
+- `PUT /api/admin/registration-links/{registrationLink}`
+- `PATCH /api/admin/registration-links/{registrationLink}/toggle`
+- `GET /api/admin/reference-data`
+- `POST /api/admin/reference-data/department-templates`
+- `PUT /api/admin/reference-data/department-templates/{departmentTemplate}`
+- `DELETE /api/admin/reference-data/department-templates/{departmentTemplate}`
+- `POST /api/admin/reference-data/faculty-roles`
+- `PUT /api/admin/reference-data/faculty-roles/{facultyRole}`
+- `DELETE /api/admin/reference-data/faculty-roles/{facultyRole}`
+
+## Local Setup
+
+1. Install dependencies
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+npm install
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+2. Environment
 
-## Contributing
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+3. Configure database in `.env`, then run migrations + seeders
 
-## Code of Conduct
+```bash
+php artisan migrate
+php artisan db:seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+4. Create storage symlink for uploads
 
-## Security Vulnerabilities
+```bash
+php artisan storage:link
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+5. Run in development
+
+```bash
+composer run dev
+```
+
+or run separately:
+
+```bash
+php artisan serve
+npm run dev
+```
+
+## Build for Production
+
+```bash
+npm run build
+php artisan optimize
+```
+
+## Seeded Accounts
+
+From the current `DatabaseSeeder`:
+
+- Admin
+  - Email: `admin@yearbook.test`
+  - Password: `password123`
+- Student
+  - Email: `student@yearbook.test`
+  - Password: `password123`
+
+## Seeded Demo Data (Current)
+
+- 1 yearbook: class of **2023**
+- 1 department: **BSIT**
+- 1 faculty record
+- 1 student profile linked to `student@yearbook.test`
+
+## Media and Uploads
+
+- Media is served through:
+  - `/media/student-photos/{filename}`
+  - `/media/faculty-photos/{filename}`
+  - `/media/department-group-photos/{filename}`
+- Application validation currently allows image uploads up to **15MB per file**.
+
+Important: server limits must also allow this size (`upload_max_filesize`, `post_max_size`).
+
+## Deployment Notes
+
+- Set `APP_ENV=production`, `APP_DEBUG=false`, and correct `APP_URL`.
+- Run `composer install --no-dev --optimize-autoloader`.
+- Build frontend assets with `npm ci && npm run build`.
+- Cache config/routes/views:
+
+```bash
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is private/internal unless otherwise specified by the repository owner.

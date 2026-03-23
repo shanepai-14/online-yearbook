@@ -1,4 +1,4 @@
-import { Download, ImagePlus, Sparkles } from 'lucide-react';
+import { Download, ImagePlus, Menu, Sparkles, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -579,6 +579,7 @@ export default function GuestCardMakerPage() {
     const [downloading, setDownloading] = useState(false);
     const [notice, setNotice] = useState('');
     const [mobileStep, setMobileStep] = useState(0);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [form, setForm] = useState({
         schoolName: 'Davao Vision Colleges',
         name: 'Guest Student',
@@ -657,15 +658,15 @@ export default function GuestCardMakerPage() {
                 className="flex h-14 items-center justify-between border-b-2 px-6 sm:px-10"
                 style={{ background: palette.navy, borderColor: palette.goldDark }}
             >
-                <div className="flex items-center gap-3">
+                <Link to="/yearbook" className="flex min-w-0 items-center gap-3">
                     <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-white">
                         <DVCLogo />
                     </div>
-                    <span className="text-xs uppercase tracking-[0.2em]" style={{ ...sansStyle, color: palette.gold }}>
+                    <span className="truncate text-xs uppercase tracking-[0.2em]" style={{ ...sansStyle, color: palette.gold }}>
                         Davao Vision Colleges · Fun Card Maker
                     </span>
-                </div>
-                <div className="flex items-center gap-2">
+                </Link>
+                <div className="hidden items-center gap-2 sm:flex">
                     <Link
                         to="/yearbook"
                         className="border px-3 py-1 text-xs uppercase tracking-[0.15em] transition-colors"
@@ -691,7 +692,57 @@ export default function GuestCardMakerPage() {
                         Login
                     </Link>
                 </div>
+
+                <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen((current) => !current)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded border sm:hidden"
+                    style={{
+                        borderColor: 'rgba(232,217,138,0.35)',
+                        color: 'rgba(232,217,138,0.92)',
+                        background: 'rgba(255,255,255,0.05)',
+                    }}
+                    aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                >
+                    {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                </button>
             </nav>
+
+            {mobileMenuOpen ? (
+                <div
+                    className="border-b-2 px-6 py-3 sm:hidden"
+                    style={{ background: palette.navy, borderColor: palette.goldDark }}
+                >
+                    <div className="grid gap-2">
+                        <Link
+                            to="/yearbook"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-10 items-center justify-center rounded border text-xs uppercase tracking-[0.15em]"
+                            style={{
+                                ...sansStyle,
+                                borderColor: 'rgba(232,217,138,0.35)',
+                                color: 'rgba(232,217,138,0.92)',
+                                background: 'rgba(255,255,255,0.05)',
+                            }}
+                        >
+                            Home
+                        </Link>
+                        <Link
+                            to="/yearbook/login"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex h-10 items-center justify-center rounded border text-xs uppercase tracking-[0.15em]"
+                            style={{
+                                ...sansStyle,
+                                borderColor: 'rgba(232,217,138,0.35)',
+                                color: 'rgba(232,217,138,0.92)',
+                                background: 'rgba(255,255,255,0.05)',
+                            }}
+                        >
+                            Login
+                        </Link>
+                    </div>
+                </div>
+            ) : null}
 
             <section
                 className="relative overflow-hidden border-b-2 px-6 pb-12 pt-14 sm:px-10"

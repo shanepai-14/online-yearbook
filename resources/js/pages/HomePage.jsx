@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
 
 import { yearbookPalette as palette } from '@/lib/theme';
 
@@ -165,6 +166,7 @@ export default function HomePage() {
     const [error, setError] = useState('');
     const [schoolName, setSchoolName] = useState('Davao Vision Colleges');
     const [years, setYears] = useState([]);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -211,18 +213,19 @@ export default function HomePage() {
                 className="flex h-14 items-center justify-between border-b-2 px-6 sm:px-10"
                 style={{ background: palette.navy, borderColor: palette.goldDark }}
             >
-                <div className="flex items-center gap-3">
+                <Link to="/yearbook" className="flex min-w-0 items-center gap-3">
                     <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-white">
                         <DVCLogo />
                     </div>
                     <span
-                        className="text-xs uppercase tracking-[0.2em]"
+                        className="truncate text-xs uppercase tracking-[0.2em]"
                         style={{ ...sansStyle, color: palette.gold }}
                     >
                         {schoolName} · Yearbook
                     </span>
-                </div>
-                <div className="flex items-center gap-2">
+                </Link>
+
+                <div className="hidden items-center gap-2 sm:flex">
                     <button
                         type="button"
                         onClick={() => navigate('/yearbook/fun-card')}
@@ -250,7 +253,63 @@ export default function HomePage() {
                         Login
                     </button>
                 </div>
+
+                <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen((current) => !current)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded border sm:hidden"
+                    style={{
+                        borderColor: 'rgba(232,217,138,0.35)',
+                        color: 'rgba(232,217,138,0.92)',
+                        background: 'rgba(255,255,255,0.05)',
+                    }}
+                    aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                >
+                    {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                </button>
             </nav>
+
+            {mobileMenuOpen ? (
+                <div
+                    className="border-b-2 px-6 py-3 sm:hidden"
+                    style={{ background: palette.navy, borderColor: palette.goldDark }}
+                >
+                    <div className="grid gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMobileMenuOpen(false);
+                                navigate('/yearbook/fun-card');
+                            }}
+                            className="h-10 rounded border text-xs uppercase tracking-[0.15em]"
+                            style={{
+                                ...sansStyle,
+                                borderColor: 'rgba(232,217,138,0.35)',
+                                color: 'rgba(232,217,138,0.92)',
+                                background: 'rgba(255,255,255,0.05)',
+                            }}
+                        >
+                            Fun Card
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMobileMenuOpen(false);
+                                navigate('/yearbook/login');
+                            }}
+                            className="h-10 rounded border text-xs uppercase tracking-[0.15em]"
+                            style={{
+                                ...sansStyle,
+                                borderColor: 'rgba(232,217,138,0.35)',
+                                color: 'rgba(232,217,138,0.92)',
+                                background: 'rgba(255,255,255,0.05)',
+                            }}
+                        >
+                            Login
+                        </button>
+                    </div>
+                </div>
+            ) : null}
 
             <section
                 className="relative overflow-hidden border-b-2 px-6 pb-12 pt-14 sm:px-10"
