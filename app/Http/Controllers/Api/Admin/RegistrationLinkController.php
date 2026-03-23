@@ -259,7 +259,7 @@ class RegistrationLinkController extends Controller
             'status' => $link->availabilityState(),
             'availability_message' => $link->availabilityMessage(),
             'registrations_count' => (int) ($link->students_count ?? 0),
-            'registration_url' => url('/register/'.$link->token),
+            'registration_url' => url('/yearbook/register/'.$link->token),
             'yearbook' => $link->yearbook ? [
                 'id' => $link->yearbook->id,
                 'graduating_year' => $link->yearbook->graduating_year,

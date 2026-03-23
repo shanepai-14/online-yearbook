@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 
 import AdminLayout from '@/layouts/AdminLayout';
 import MainLayout from '@/layouts/MainLayout';
@@ -19,19 +19,43 @@ import StudentProfilePage from '@/pages/StudentProfilePage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import { AdminAccessRoute, GuestOnlyRoute, StudentAccessRoute } from '@/router/guards';
 
+function LegacyGraduatesRedirect() {
+    const { year } = useParams();
+    const nextYear = year || '2025';
+
+    return <Navigate to={`/yearbook/${nextYear}`} replace />;
+}
+
+function LegacyRegisterRedirect() {
+    const { token } = useParams();
+
+    if (!token) {
+        return <Navigate to="/yearbook" replace />;
+    }
+
+    return <Navigate to={`/yearbook/register/${token}`} replace />;
+}
+
 export function AppRouter() {
     return (
         <BrowserRouter>
             <Routes>
                 <Route element={<MainLayout />}>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/fun-card" element={<GuestCardMakerPage />} />
-                    <Route path="/graduates/:year" element={<GraduatesYearPage />} />
-                    <Route path="/register/:token" element={<RegisterByLinkPage />} />
+                    <Route path="/yearbook" element={<HomePage />} />
+                    <Route path="/yearbook/fun-card" element={<GuestCardMakerPage />} />
+                    <Route path="/yearbook/:year" element={<GraduatesYearPage />} />
+                    <Route path="/yearbook/register/:token" element={<RegisterByLinkPage />} />
 
                     <Route element={<GuestOnlyRoute />}>
-                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/yearbook/login" element={<LoginPage />} />
                     </Route>
+
+                    <Route path="/" element={<Navigate to="/yearbook" replace />} />
+                    <Route path="/login" element={<Navigate to="/yearbook/login" replace />} />
+                    <Route path="/fun-card" element={<Navigate to="/yearbook/fun-card" replace />} />
+                    <Route path="/register/:token" element={<LegacyRegisterRedirect />} />
+                    <Route path="/graduates/:year" element={<LegacyGraduatesRedirect />} />
+                    <Route path="/graduates" element={<Navigate to="/yearbook/2025" replace />} />
 
                     <Route path="/unauthorized" element={<UnauthorizedPage />} />
                 </Route>
@@ -54,7 +78,6 @@ export function AppRouter() {
                     </Route>
                 </Route>
 
-                <Route path="/graduates" element={<Navigate to="/graduates/2025" replace />} />
                 <Route path="*" element={<NotFoundPage />} />
             </Routes>
         </BrowserRouter>

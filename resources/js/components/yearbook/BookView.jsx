@@ -4,8 +4,8 @@ import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { yearbookPalette as palette } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
-const FACULTY_PLACEHOLDER = 'https://via.placeholder.com/320x320?text=Faculty';
-const STUDENT_PLACEHOLDER = 'https://via.placeholder.com/360x480?text=Student';
+const FACULTY_PLACEHOLDER = 'https://placehold.co/320x320';
+const STUDENT_PLACEHOLDER = 'https://placehold.co/360x480';
 
 const SPINE_WIDTH = 18;
 const FLIP_DURATION_MS = 600;

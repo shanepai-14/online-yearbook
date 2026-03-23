@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/hooks/useAuth';
 
-export default function ProtectedRoute({ children, redirectTo = '/login' }) {
+export default function ProtectedRoute({ children, redirectTo = '/yearbook/login' }) {
     const { user, loading } = useAuth();
     const location = useLocation();
 

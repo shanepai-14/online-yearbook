@@ -212,7 +212,7 @@ export default function RegisterByLinkPage() {
                     <h1 className="text-2xl font-semibold text-slate-900">Registration Link Unavailable</h1>
                     <p className="mt-3 text-sm text-slate-600">{error || 'This registration link is invalid.'}</p>
                     <Button asChild className="mt-6">
-                        <Link to="/">Back to Home</Link>
+                        <Link to="/yearbook">Back to Home</Link>
                     </Button>
                 </div>
             </div>
@@ -260,10 +260,10 @@ export default function RegisterByLinkPage() {
 
                     <div className="mt-6 flex flex-wrap gap-3">
                         <Button asChild variant="outline">
-                            <Link to="/login">Go to Login</Link>
+                            <Link to="/yearbook/login">Go to Login</Link>
                         </Button>
                         <Button asChild variant="ghost">
-                            <Link to="/">Back to Home</Link>
+                            <Link to="/yearbook">Back to Home</Link>
                         </Button>
                     </div>
                 </section>

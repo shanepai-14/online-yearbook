@@ -452,7 +452,7 @@ export default function GraduatesYearPage() {
                     Please try again in a moment.
                 </p>
                 <Button asChild className="mt-6" style={{ background: palette.navy }}>
-                    <Link to="/">Back to Home</Link>
+                    <Link to="/yearbook">Back to Home</Link>
                 </Button>
             </div>
         );
@@ -466,7 +466,7 @@ export default function GraduatesYearPage() {
                 </h1>
                 <p className="mt-2 text-sm text-slate-600">No public yearbook is available for {year}.</p>
                 <Button asChild className="mt-6" style={{ background: palette.navy }}>
-                    <Link to="/">Back to Home</Link>
+                    <Link to="/yearbook">Back to Home</Link>
                 </Button>
             </div>
         );

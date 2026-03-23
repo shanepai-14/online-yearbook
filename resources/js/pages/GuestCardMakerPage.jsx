@@ -59,6 +59,11 @@ const ALIGNMENT_OPTIONS = [
     { value: 'center', label: 'Center' },
     { value: 'right', label: 'Right' },
 ];
+const MOBILE_STEPS = ['Details', 'Design', 'Preview'];
+const SELECT_INPUT_CLASS =
+    'h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200';
+const PHOTO_UPLOAD_INPUT_CLASS =
+    'cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white';
 
 function normalizeAlignment(value) {
     if (value === 'center' || value === 'right') {
@@ -190,18 +195,21 @@ function wrapTextLines(ctx, text, maxWidth, maxLines = 2) {
 }
 
 function drawStudentCardCore(ctx, payload, image, template) {
-    const cardWidth = 720;
-    const cardHeight = 960;
-    const cardX = (CARD_WIDTH - cardWidth) / 2;
-    const cardY = 210;
+    const showFrame = payload.showFrame !== false;
+    const cardWidth = showFrame ? 720 : CARD_WIDTH;
+    const cardHeight = showFrame ? 960 : CARD_HEIGHT;
+    const cardX = showFrame ? (CARD_WIDTH - cardWidth) / 2 : 0;
+    const cardY = showFrame ? 210 : 0;
     const textAlignment = normalizeAlignment(payload.textAlignment);
 
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.fillRect(cardX + 10, cardY + 12, cardWidth, cardHeight);
+    if (showFrame) {
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.fillRect(cardX + 10, cardY + 12, cardWidth, cardHeight);
+    }
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(cardX, cardY, cardWidth, cardHeight);
-    if (payload.showFrame !== false) {
+    if (showFrame) {
         ctx.strokeStyle = palette.cardBorder;
         ctx.lineWidth = 3;
         ctx.strokeRect(cardX, cardY, cardWidth, cardHeight);
@@ -348,6 +356,132 @@ function TemplateButton({ template, active, onClick }) {
     );
 }
 
+function CardDetailsFields({ form, updateField, handlePhotoUpload }) {
+    return (
+        <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+                <Label htmlFor="guest_school_name">School Name</Label>
+                <Input
+                    id="guest_school_name"
+                    value={form.schoolName}
+                    onChange={(event) => updateField('schoolName', event.target.value)}
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="guest_year">Graduation Year</Label>
+                <Input
+                    id="guest_year"
+                    value={form.year}
+                    onChange={(event) => updateField('year', event.target.value)}
+                    placeholder="2026"
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="guest_name">Name</Label>
+                <Input
+                    id="guest_name"
+                    value={form.name}
+                    onChange={(event) => updateField('name', event.target.value)}
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="guest_department">Department / Program</Label>
+                <Input
+                    id="guest_department"
+                    value={form.department}
+                    onChange={(event) => updateField('department', event.target.value)}
+                />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="guest_motto">Motto</Label>
+                <Input
+                    id="guest_motto"
+                    value={form.motto}
+                    onChange={(event) => updateField('motto', event.target.value)}
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="guest_badge">Badge (optional)</Label>
+                <Input
+                    id="guest_badge"
+                    value={form.badge}
+                    onChange={(event) => updateField('badge', event.target.value)}
+                    placeholder="Honor Student"
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="guest_photo">Upload Photo</Label>
+                <Input
+                    id="guest_photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className={PHOTO_UPLOAD_INPUT_CLASS}
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="guest_text_alignment">Text Alignment</Label>
+                <select
+                    id="guest_text_alignment"
+                    value={normalizeAlignment(form.textAlignment)}
+                    onChange={(event) => updateField('textAlignment', event.target.value)}
+                    className={SELECT_INPUT_CLASS}
+                >
+                    {ALIGNMENT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="guest_show_frame">Card Frame</Label>
+                <select
+                    id="guest_show_frame"
+                    value={form.showFrame ? 'on' : 'off'}
+                    onChange={(event) => updateField('showFrame', event.target.value === 'on')}
+                    className={SELECT_INPUT_CLASS}
+                >
+                    <option value="on">With Frame</option>
+                    <option value="off">No Frame</option>
+                </select>
+            </div>
+        </div>
+    );
+}
+
+function DesignChooser({ designOptions, templateId, onSelect }) {
+    return (
+        <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.14em]" style={{ ...sansStyle, color: palette.muted }}>
+                Choose Design
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+                {designOptions.map((template) => (
+                    <TemplateButton
+                        key={template.id}
+                        template={template}
+                        active={template.id === templateId}
+                        onClick={() => onSelect(template.id)}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function DownloadActions({ downloading, notice, onDownload }) {
+    return (
+        <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" onClick={onDownload} disabled={downloading}>
+                <Download className="mr-2 h-4 w-4" />
+                {downloading ? 'Preparing...' : 'Download Card'}
+            </Button>
+            {notice ? <p className="text-sm text-red-600">{notice}</p> : null}
+        </div>
+    );
+}
+
 function PreviewCard({ template, form }) {
     const showFrame = Boolean(form.showFrame);
     const [previewMaxWidth, setPreviewMaxWidth] = useState(DEFAULT_PREVIEW_MAX_WIDTH);
@@ -444,6 +578,7 @@ export default function GuestCardMakerPage() {
     const [templateId, setTemplateId] = useState('classic');
     const [downloading, setDownloading] = useState(false);
     const [notice, setNotice] = useState('');
+    const [mobileStep, setMobileStep] = useState(0);
     const [form, setForm] = useState({
         schoolName: 'Davao Vision Colleges',
         name: 'Guest Student',
@@ -456,6 +591,7 @@ export default function GuestCardMakerPage() {
         photo: '',
     });
 
+    const maxMobileStep = MOBILE_STEPS.length - 1;
     const selectedTemplate = TEMPLATES[templateId] ?? TEMPLATES.classic;
     const designOptions = useMemo(() => Object.values(TEMPLATES), []);
 
@@ -469,6 +605,10 @@ export default function GuestCardMakerPage() {
 
     const updateField = (field, value) => {
         setForm((current) => ({ ...current, [field]: value }));
+    };
+
+    const goMobileStep = (nextStep) => {
+        setMobileStep(clamp(nextStep, 0, maxMobileStep));
     };
 
     const handlePhotoUpload = (event) => {
@@ -527,7 +667,7 @@ export default function GuestCardMakerPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     <Link
-                        to="/"
+                        to="/yearbook"
                         className="border px-3 py-1 text-xs uppercase tracking-[0.15em] transition-colors"
                         style={{
                             ...sansStyle,
@@ -539,7 +679,7 @@ export default function GuestCardMakerPage() {
                         Home
                     </Link>
                     <Link
-                        to="/login"
+                        to="/yearbook/login"
                         className="border px-3 py-1 text-xs uppercase tracking-[0.15em] transition-colors"
                         style={{
                             ...sansStyle,
@@ -586,125 +726,128 @@ export default function GuestCardMakerPage() {
             </section>
 
             <section className="px-6 py-6 sm:px-10">
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
+                <div className="space-y-4 lg:hidden">
+                    <article className="rounded-2xl border bg-white p-4 shadow-sm" style={{ borderColor: palette.cardBorder }}>
+                        <p className="text-xs uppercase tracking-[0.14em]" style={{ ...sansStyle, color: palette.muted }}>
+                            Mobile Steps
+                        </p>
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                            {MOBILE_STEPS.map((stepLabel, stepIndex) => {
+                                const isActive = stepIndex === mobileStep;
+
+                                return (
+                                    <button
+                                        key={stepLabel}
+                                        type="button"
+                                        onClick={() => goMobileStep(stepIndex)}
+                                        className="rounded-md px-2 py-2 text-[11px] uppercase tracking-[0.08em] transition"
+                                        style={{
+                                            ...sansStyle,
+                                            border: `1px solid ${isActive ? palette.navy : palette.cardBorder}`,
+                                            background: isActive ? `${palette.navy}10` : '#ffffff',
+                                            color: isActive ? palette.navy : '#64748b',
+                                        }}
+                                    >
+                                        {stepIndex + 1}. {stepLabel}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </article>
+
+                    {mobileStep === 0 ? (
+                        <article className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: palette.cardBorder }}>
+                            <div className="mb-4 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4" style={{ color: palette.red }} />
+                                    <h2 className="text-lg font-semibold text-slate-900">Step 1: Details</h2>
+                                </div>
+                                <span className="text-xs text-slate-500" style={sansStyle}>
+                                    1 / 3
+                                </span>
+                            </div>
+                            <CardDetailsFields form={form} updateField={updateField} handlePhotoUpload={handlePhotoUpload} />
+                            <div className="mt-5 flex justify-end">
+                                <Button type="button" onClick={() => goMobileStep(1)}>
+                                    Next: Design
+                                </Button>
+                            </div>
+                        </article>
+                    ) : null}
+
+                    {mobileStep === 1 ? (
+                        <article className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: palette.cardBorder }}>
+                            <div className="mb-4 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4" style={{ color: palette.red }} />
+                                    <h2 className="text-lg font-semibold text-slate-900">Step 2: Design</h2>
+                                </div>
+                                <span className="text-xs text-slate-500" style={sansStyle}>
+                                    2 / 3
+                                </span>
+                            </div>
+                            <DesignChooser
+                                designOptions={designOptions}
+                                templateId={templateId}
+                                onSelect={setTemplateId}
+                            />
+                            <div className="mt-5 flex items-center justify-between gap-3">
+                                <Button type="button" variant="outline" onClick={() => goMobileStep(0)}>
+                                    Back
+                                </Button>
+                                <Button type="button" onClick={() => goMobileStep(2)}>
+                                    Next: Preview
+                                </Button>
+                            </div>
+                        </article>
+                    ) : null}
+
+                    {mobileStep === 2 ? (
+                        <article className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: palette.cardBorder }}>
+                            <div className="mb-4 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <ImagePlus className="h-4 w-4" style={{ color: palette.navy }} />
+                                    <h2 className="text-lg font-semibold text-slate-900">Step 3: Preview</h2>
+                                </div>
+                                <span className="text-xs text-slate-500" style={sansStyle}>
+                                    3 / 3
+                                </span>
+                            </div>
+                            <PreviewCard template={selectedTemplate} form={form} />
+                            <p className="mt-4 text-xs text-slate-500">For fun use only. This does not create an official yearbook record.</p>
+                            <div className="mt-5 flex items-center justify-between gap-3">
+                                <Button type="button" variant="outline" onClick={() => goMobileStep(1)}>
+                                    Back
+                                </Button>
+                                <Button type="button" onClick={handleDownload} disabled={downloading}>
+                                    <Download className="mr-2 h-4 w-4" />
+                                    {downloading ? 'Preparing...' : 'Download Card'}
+                                </Button>
+                            </div>
+                            {notice ? <p className="mt-3 text-sm text-red-600">{notice}</p> : null}
+                        </article>
+                    ) : null}
+                </div>
+
+                <div className="hidden gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_420px]">
                     <article className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6" style={{ borderColor: palette.cardBorder }}>
                         <div className="mb-4 flex items-center gap-2">
                             <Sparkles className="h-4 w-4" style={{ color: palette.red }} />
                             <h2 className="text-lg font-semibold text-slate-900">Card Details</h2>
                         </div>
 
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="guest_school_name">School Name</Label>
-                                <Input
-                                    id="guest_school_name"
-                                    value={form.schoolName}
-                                    onChange={(event) => updateField('schoolName', event.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="guest_year">Graduation Year</Label>
-                                <Input
-                                    id="guest_year"
-                                    value={form.year}
-                                    onChange={(event) => updateField('year', event.target.value)}
-                                    placeholder="2026"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="guest_name">Name</Label>
-                                <Input
-                                    id="guest_name"
-                                    value={form.name}
-                                    onChange={(event) => updateField('name', event.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="guest_department">Department / Program</Label>
-                                <Input
-                                    id="guest_department"
-                                    value={form.department}
-                                    onChange={(event) => updateField('department', event.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2 sm:col-span-2">
-                                <Label htmlFor="guest_motto">Motto</Label>
-                                <Input
-                                    id="guest_motto"
-                                    value={form.motto}
-                                    onChange={(event) => updateField('motto', event.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="guest_badge">Badge (optional)</Label>
-                                <Input
-                                    id="guest_badge"
-                                    value={form.badge}
-                                    onChange={(event) => updateField('badge', event.target.value)}
-                                    placeholder="Honor Student"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="guest_photo">Upload Photo</Label>
-                                <Input
-                                    id="guest_photo"
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handlePhotoUpload}
-                                    className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="guest_text_alignment">Text Alignment</Label>
-                                <select
-                                    id="guest_text_alignment"
-                                    value={normalizeAlignment(form.textAlignment)}
-                                    onChange={(event) => updateField('textAlignment', event.target.value)}
-                                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                                >
-                                    {ALIGNMENT_OPTIONS.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="guest_show_frame">Card Frame</Label>
-                                <select
-                                    id="guest_show_frame"
-                                    value={form.showFrame ? 'on' : 'off'}
-                                    onChange={(event) => updateField('showFrame', event.target.value === 'on')}
-                                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                                >
-                                    <option value="on">With Frame</option>
-                                    <option value="off">No Frame</option>
-                                </select>
-                            </div>
+                        <CardDetailsFields form={form} updateField={updateField} handlePhotoUpload={handlePhotoUpload} />
+
+                        <div className="mt-6">
+                            <DesignChooser
+                                designOptions={designOptions}
+                                templateId={templateId}
+                                onSelect={setTemplateId}
+                            />
                         </div>
 
-                        <div className="mt-6 space-y-3">
-                            <p className="text-xs uppercase tracking-[0.14em]" style={{ ...sansStyle, color: palette.muted }}>
-                                Choose Design
-                            </p>
-                            <div className="grid gap-3 sm:grid-cols-3">
-                                {designOptions.map((template) => (
-                                    <TemplateButton
-                                        key={template.id}
-                                        template={template}
-                                        active={template.id === templateId}
-                                        onClick={() => setTemplateId(template.id)}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="mt-6 flex flex-wrap items-center gap-3">
-                            <Button type="button" onClick={handleDownload} disabled={downloading}>
-                                <Download className="mr-2 h-4 w-4" />
-                                {downloading ? 'Preparing...' : 'Download Card'}
-                            </Button>
-                            {notice ? <p className="text-sm text-red-600">{notice}</p> : null}
+                        <div className="mt-6">
+                            <DownloadActions downloading={downloading} notice={notice} onDownload={handleDownload} />
                         </div>
                     </article>
 

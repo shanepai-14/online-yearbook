@@ -225,7 +225,7 @@ export default function HomePage() {
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => navigate('/fun-card')}
+                        onClick={() => navigate('/yearbook/fun-card')}
                         className="border px-3 py-1 text-xs uppercase tracking-[0.15em] transition-colors"
                         style={{
                             ...sansStyle,
@@ -238,7 +238,7 @@ export default function HomePage() {
                     </button>
                     <button
                         type="button"
-                        onClick={() => navigate('/login')}
+                        onClick={() => navigate('/yearbook/login')}
                         className="border px-3 py-1 text-xs uppercase tracking-[0.15em] transition-colors"
                         style={{
                             ...sansStyle,
@@ -325,7 +325,7 @@ export default function HomePage() {
                                 key={yearItem.year}
                                 data={yearItem}
                                 isLatest={index === 0}
-                                onClick={() => navigate(`/graduates/${yearItem.year}`)}
+                                onClick={() => navigate(`/yearbook/${yearItem.year}`)}
                             />
                         ))}
                     </div>

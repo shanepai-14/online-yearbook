@@ -164,7 +164,7 @@ export default function StudentDashboardPage() {
                         Edit Profile
                     </Link>
                     <Link
-                        to={`/graduates/${profile.graduating_year || 2025}`}
+                        to={`/yearbook/${profile.graduating_year || 2025}`}
                         className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
                     >
                         <Eye className="h-4 w-4" />

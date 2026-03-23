@@ -65,7 +65,7 @@ export default function AdminLayout() {
 
     const handleLogout = async () => {
         await logout();
-        navigate('/login', { replace: true });
+        navigate('/yearbook/login', { replace: true });
     };
 
     return (

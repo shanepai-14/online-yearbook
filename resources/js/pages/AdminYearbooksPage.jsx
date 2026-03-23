@@ -952,7 +952,7 @@ export default function AdminYearbooksPage() {
                                             <div className="flex justify-end gap-2">
                                                 <Button type="button" variant="outline" size="icon" asChild>
                                                     <a
-                                                        href={`/graduates/${yearbook.graduating_year}`}
+                                                        href={`/yearbook/${yearbook.graduating_year}`}
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         title={`Preview Class of ${yearbook.graduating_year}`}

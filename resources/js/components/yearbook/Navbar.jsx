@@ -6,7 +6,7 @@ export default function Navbar({ schoolName, year }) {
     return (
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-                <Link to="/" className="text-sm font-semibold text-slate-900 sm:text-base">
+                <Link to="/yearbook" className="text-sm font-semibold text-slate-900 sm:text-base">
                     {schoolName}
                 </Link>
 
@@ -15,7 +15,7 @@ export default function Navbar({ schoolName, year }) {
                         Class of {year}
                     </span>
                     <Button asChild size="sm" variant="outline">
-                        <Link to="/login">Login</Link>
+                        <Link to="/yearbook/login">Login</Link>
                     </Button>
                 </div>
             </div>

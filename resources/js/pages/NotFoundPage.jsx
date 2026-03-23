@@ -8,7 +8,7 @@ export default function NotFoundPage() {
             <h1 className="text-2xl font-semibold text-slate-900">Page not found</h1>
             <p className="mt-2 text-sm text-slate-600">The page you requested does not exist.</p>
             <Button asChild className="mt-6">
-                <Link to="/">Back to Home</Link>
+                <Link to="/yearbook">Back to Home</Link>
             </Button>
         </div>
     );

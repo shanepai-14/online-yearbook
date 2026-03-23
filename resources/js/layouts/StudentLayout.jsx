@@ -15,7 +15,7 @@ export default function StudentLayout() {
 
     const handleLogout = async () => {
         await logout();
-        navigate('/login', { replace: true });
+        navigate('/yearbook/login', { replace: true });
     };
 
     return (

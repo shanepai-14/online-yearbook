@@ -6,7 +6,7 @@ export default function RoleGate({ allow = [], children, redirectTo = '/unauthor
     const { user } = useAuth();
 
     if (!user) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/yearbook/login" replace />;
     }
 
     if (allow.length > 0 && !allow.includes(user.role)) {
