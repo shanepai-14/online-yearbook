@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
+import { STUDENT_GENDER_OPTIONS } from '@/lib/placeholders';
 import { yearbookPalette as palette } from '@/lib/theme';
 
 const initialForm = {
     name: '',
+    gender: '',
     email: '',
     password: '',
     password_confirmation: '',
@@ -139,6 +141,7 @@ export default function RegisterByLinkPage() {
 
         const payload = new FormData();
         payload.append('name', form.name);
+        payload.append('gender', form.gender);
         payload.append('email', form.email);
         payload.append('password', form.password);
         payload.append('password_confirmation', form.password_confirmation);
@@ -284,6 +287,24 @@ export default function RegisterByLinkPage() {
                                 placeholder="Your full name"
                                 required
                             />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="register_gender">Gender</Label>
+                            <select
+                                id="register_gender"
+                                value={form.gender}
+                                onChange={handleChange('gender')}
+                                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-[#1a2a6c] focus:ring-2 focus:ring-[#1a2a6c]/30"
+                                required
+                            >
+                                <option value="">Select gender</option>
+                                {STUDENT_GENDER_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className="space-y-2">

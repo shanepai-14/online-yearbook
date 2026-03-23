@@ -75,6 +75,7 @@ class StudentProfileController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'gender' => ['nullable', Rule::in(['male', 'female'])],
             'photo' => ['nullable', 'string', 'max:2048'],
             'photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
             'motto' => ['nullable', 'string', 'max:255'],
@@ -113,6 +114,7 @@ class StudentProfileController extends Controller
 
         $profile->fill([
             'name' => $validated['name'],
+            'gender' => $validated['gender'] ?? null,
             'photo' => $photo,
             'motto' => $validated['motto'],
             'badge' => $validated['badge'],
@@ -319,6 +321,7 @@ class StudentProfileController extends Controller
             'department_id' => $defaultDepartment->id,
             'yearbook_id' => $defaultYearbook->id,
             'name' => $user->name,
+            'gender' => null,
             'photo' => null,
             'motto' => null,
             'badge' => null,
@@ -450,6 +453,7 @@ class StudentProfileController extends Controller
         return [
             'id' => $profile->id,
             'name' => $profile->name,
+            'gender' => $profile->gender,
             'photo' => StudentPhotoMedia::normalizePublicUrl($profile->photo),
             'motto' => $profile->motto,
             'badge' => $profile->badge,

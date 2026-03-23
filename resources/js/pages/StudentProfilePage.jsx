@@ -8,9 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { getStudentPlaceholder, STUDENT_GENDER_OPTIONS } from '@/lib/placeholders';
 
 const initialFormState = {
     name: '',
+    gender: '',
     photo: '',
     motto: '',
     badge: '',
@@ -93,6 +95,7 @@ export default function StudentProfilePage() {
 
                 setForm({
                     name: profile?.name || '',
+                    gender: profile?.gender || '',
                     photo: profile?.photo || '',
                     motto: profile?.motto || '',
                     badge: profile?.badge || '',
@@ -252,6 +255,7 @@ export default function StudentProfilePage() {
         try {
             const payload = new FormData();
             payload.append('name', form.name);
+            payload.append('gender', form.gender || '');
             payload.append('motto', form.motto);
             payload.append('badge', form.badge);
             payload.append('class_motto', form.class_motto || '');
@@ -280,6 +284,7 @@ export default function StudentProfilePage() {
 
             setForm({
                 name: profile?.name || '',
+                gender: profile?.gender || '',
                 photo: profile?.photo || '',
                 motto: profile?.motto || '',
                 badge: profile?.badge || '',
@@ -302,7 +307,7 @@ export default function StudentProfilePage() {
     }
 
     const completion = completionPercent(form, Boolean(photoFile));
-    const photoDisplay = photoPreview || form.photo || 'https://via.placeholder.com/320x320?text=Student';
+    const photoDisplay = photoPreview || form.photo || getStudentPlaceholder(form.gender);
 
     return (
         <Card>
@@ -322,6 +327,23 @@ export default function StudentProfilePage() {
                     <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="name">Name</Label>
                         <Input id="name" value={form.name} onChange={handleInputChange('name')} required />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="gender">Gender</Label>
+                        <select
+                            id="gender"
+                            value={form.gender}
+                            onChange={handleInputChange('gender')}
+                            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                        >
+                            <option value="">Prefer not to say</option>
+                            {STUDENT_GENDER_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="space-y-2 sm:col-span-2">

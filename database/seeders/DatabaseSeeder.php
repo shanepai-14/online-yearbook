@@ -113,6 +113,7 @@ class DatabaseSeeder extends Seeder
             'department_id' => $bsit->id,
             'yearbook_id' => $yearbook2023->id,
             'name' => 'Student User',
+            'gender' => 'male',
             'photo' => null,
             'motto' => 'Build with purpose.',
             'badge' => 'Honor Student',

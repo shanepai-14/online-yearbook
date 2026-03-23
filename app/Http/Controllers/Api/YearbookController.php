@@ -73,7 +73,7 @@ class YearbookController extends Controller
                 'departments.template:id,label,full_name,description',
                 'departments.groupPhotos:id,department_id,photo,sort_order',
                 'departments.faculty:id,department_id,name,role,photo',
-                'students:id,yearbook_id,department_id,name,photo,motto,badge',
+                'students:id,yearbook_id,department_id,name,gender,photo,motto,badge',
             ])
             ->first();
 
@@ -167,6 +167,7 @@ class YearbookController extends Controller
             'students' => $yearbook->students->map(fn ($student) => [
                 'id' => $student->id,
                 'name' => $student->name,
+                'gender' => $student->gender,
                 'photo' => StudentPhotoMedia::normalizePublicUrl($student->photo),
                 'motto' => $student->motto,
                 'badge' => $student->badge,
