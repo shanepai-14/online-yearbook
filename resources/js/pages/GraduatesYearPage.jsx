@@ -12,7 +12,15 @@ import {
     resolveFacultyPhoto,
     resolveStudentPhoto,
 } from '@/lib/placeholders';
+import { AnimatePresence, motion } from 'framer-motion';
+
 import { yearbookPalette as palette } from '@/lib/theme';
+
+const fadeUp = {
+    hidden: { opacity: 0, y: 16 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } },
+};
+const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
 
 const GROUP_PHOTO_PLACEHOLDER = 'https://via.placeholder.com/1200x720?text=Department+Group+Photo';
 
@@ -825,72 +833,76 @@ export default function GraduatesYearPage() {
                                 }}
                             />
 
-                            <div
-                                className={`mb-3 text-xs uppercase tracking-[0.2em] ${textAlignClass}`}
-                                style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.goldDark }}
-                            >
-                                {yearbook.academic_year_text}
-                            </div>
+                            <motion.div variants={stagger} initial="hidden" animate="visible">
+                                <motion.div
+                                    variants={fadeUp}
+                                    className={`mb-3 text-xs uppercase tracking-[0.2em] ${textAlignClass}`}
+                                    style={{ fontFamily: "'Helvetica Neue', sans-serif", color: palette.goldDark }}
+                                >
+                                    {yearbook.academic_year_text}
+                                </motion.div>
 
-                            <h1 className={`mb-2 text-4xl font-normal tracking-wide text-white ${textAlignClass}`}>
-                                Class of <span style={{ color: palette.gold }}>{yearbook.graduating_year}</span>
-                            </h1>
+                                <motion.h1 variants={fadeUp} className={`mb-2 text-4xl font-normal tracking-wide text-white ${textAlignClass}`}>
+                                    Class of <span style={{ color: palette.gold }}>{yearbook.graduating_year}</span>
+                                </motion.h1>
 
-                            <div className={`my-4 h-0.5 w-12 ${heroDividerPositionClass}`} style={{ background: palette.red }} />
+                                <motion.div variants={fadeUp} className={`my-4 h-0.5 w-12 ${heroDividerPositionClass}`} style={{ background: palette.red }} />
 
-                            <p
-                                className={`mb-8 max-w-lg text-sm leading-relaxed ${textAlignClass} ${heroDescriptionPositionClass}`}
-                                style={{ fontFamily: "'Helvetica Neue', sans-serif", color: 'rgba(255,255,255,0.55)' }}
-                            >
-                                {yearbook.hero_description}
-                            </p>
+                                <motion.p
+                                    variants={fadeUp}
+                                    className={`mb-8 max-w-lg text-sm leading-relaxed ${textAlignClass} ${heroDescriptionPositionClass}`}
+                                    style={{ fontFamily: "'Helvetica Neue', sans-serif", color: 'rgba(255,255,255,0.55)' }}
+                                >
+                                    {yearbook.hero_description}
+                                </motion.p>
 
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:hidden">
-                                {stats.map((stat) => (
-                                    <div key={stat[1]} className={textAlignClass}>
-                                        <div className="text-2xl" style={{ color: palette.gold }}>
-                                            {stat[0]}
+                                <motion.div variants={fadeUp} className="grid grid-cols-2 gap-x-6 gap-y-5 sm:hidden">
+                                    {stats.map((stat) => (
+                                        <div key={stat[1]} className={textAlignClass}>
+                                            <div className="text-2xl" style={{ color: palette.gold }}>
+                                                {stat[0]}
+                                            </div>
+                                            <div
+                                                className="mt-1 text-xs uppercase tracking-[0.15em]"
+                                                style={{
+                                                    fontFamily: "'Helvetica Neue', sans-serif",
+                                                    color: 'rgba(255,255,255,0.4)',
+                                                }}
+                                            >
+                                                {stat[1]}
+                                            </div>
                                         </div>
+                                    ))}
+                                </motion.div>
+
+                                <motion.div variants={fadeUp} className={`hidden w-full gap-0 overflow-x-auto sm:flex ${justifyClass}`}>
+                                    {stats.map((stat, index) => (
                                         <div
-                                            className="mt-1 text-xs uppercase tracking-[0.15em]"
+                                            key={stat[1]}
+                                            className={`shrink-0 ${textAlignClass} ${index < stats.length - 1 ? 'mr-8 pr-8' : ''}`}
                                             style={{
-                                                fontFamily: "'Helvetica Neue', sans-serif",
-                                                color: 'rgba(255,255,255,0.4)',
+                                                borderRight:
+                                                    index < stats.length - 1
+                                                        ? '0.5px solid rgba(232,217,138,0.2)'
+                                                        : 'none',
                                             }}
                                         >
-                                            {stat[1]}
+                                            <div className="text-2xl" style={{ color: palette.gold }}>
+                                                {stat[0]}
+                                            </div>
+                                            <div
+                                                className="mt-1 text-xs uppercase tracking-[0.15em]"
+                                                style={{
+                                                    fontFamily: "'Helvetica Neue', sans-serif",
+                                                    color: 'rgba(255,255,255,0.4)',
+                                                }}
+                                            >
+                                                {stat[1]}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className={`hidden w-full gap-0 overflow-x-auto sm:flex ${justifyClass}`}>
-                                {stats.map((stat, index) => (
-                                    <div
-                                        key={stat[1]}
-                                        className={`shrink-0 ${textAlignClass} ${index < stats.length - 1 ? 'mr-8 pr-8' : ''}`}
-                                        style={{
-                                            borderRight:
-                                                index < stats.length - 1
-                                                    ? '0.5px solid rgba(232,217,138,0.2)'
-                                                    : 'none',
-                                        }}
-                                    >
-                                        <div className="text-2xl" style={{ color: palette.gold }}>
-                                            {stat[0]}
-                                        </div>
-                                        <div
-                                            className="mt-1 text-xs uppercase tracking-[0.15em]"
-                                            style={{
-                                                fontFamily: "'Helvetica Neue', sans-serif",
-                                                color: 'rgba(255,255,255,0.4)',
-                                            }}
-                                        >
-                                            {stat[1]}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </motion.div>
+                            </motion.div>
                         </div>
                     </section>
 
@@ -922,7 +934,15 @@ export default function GraduatesYearPage() {
                     </div>
 
                     <main style={{ background: palette.lightBg, minHeight: '60vh' }}>
-                        <div className="px-4 py-9 sm:px-6 lg:px-10">
+                        <AnimatePresence mode="wait">
+                        <motion.div
+                            key={searchResults ? `search-${search}` : `dept-${activeDept}`}
+                            className="px-4 py-9 sm:px-6 lg:px-10"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.22, ease: 'easeOut' }}
+                        >
                             {searchResults ? (
                                 <>
                                     <div
@@ -932,20 +952,24 @@ export default function GraduatesYearPage() {
                                         {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{search}"
                                     </div>
 
-                                    <div
+                                    <motion.div
                                         className={`grid gap-2.5 ${studentGridJustifyClass}`}
                                         style={{ gridTemplateColumns: studentGridTemplateColumns }}
+                                        variants={stagger}
+                                        initial="hidden"
+                                        animate="visible"
                                     >
                                         {searchResults.map((student) => (
-                                            <StudentCard
-                                                key={student.id}
-                                                student={student}
-                                                alignment={contentAlignment}
-                                                reaction={getReactionState('student', student)}
-                                                onClick={() => openCardModal('student', searchResults, student.id)}
-                                            />
+                                            <motion.div key={student.id} variants={fadeUp}>
+                                                <StudentCard
+                                                    student={student}
+                                                    alignment={contentAlignment}
+                                                    reaction={getReactionState('student', student)}
+                                                    onClick={() => openCardModal('student', searchResults, student.id)}
+                                                />
+                                            </motion.div>
                                         ))}
-                                    </div>
+                                    </motion.div>
                                 </>
                             ) : activeDepartment ? (
                                 <>
@@ -980,42 +1004,51 @@ export default function GraduatesYearPage() {
                                     />
 
                                     <SectionDivider label="Faculty" alignment={contentAlignment} />
-                                    <div
+                                    <motion.div
                                         className={`mb-10 grid gap-2.5 ${facultyGridJustifyClass}`}
                                         style={{ gridTemplateColumns: facultyGridTemplateColumns }}
+                                        variants={stagger}
+                                        initial="hidden"
+                                        animate="visible"
                                     >
                                         {activeDepartment.faculty.map((faculty) => (
-                                            <FacultyCard
-                                                key={faculty.id}
-                                                faculty={faculty}
-                                                alignment={contentAlignment}
-                                                reaction={getReactionState('faculty', faculty)}
-                                                onClick={() => openCardModal('faculty', activeDepartment.faculty, faculty.id)}
-                                            />
+                                            <motion.div key={faculty.id} variants={fadeUp}>
+                                                <FacultyCard
+                                                    faculty={faculty}
+                                                    alignment={contentAlignment}
+                                                    reaction={getReactionState('faculty', faculty)}
+                                                    onClick={() => openCardModal('faculty', activeDepartment.faculty, faculty.id)}
+                                                />
+                                            </motion.div>
                                         ))}
-                                    </div>
+                                    </motion.div>
 
                                     <SectionDivider
                                         label={`Graduates · ${activeDepartment.label} · Class of ${yearbook.graduating_year}`}
                                         alignment={contentAlignment}
                                     />
-                                    <div
+                                    <motion.div
                                         className={`grid gap-2.5 ${studentGridJustifyClass}`}
                                         style={{ gridTemplateColumns: studentGridTemplateColumns }}
+                                        variants={stagger}
+                                        initial="hidden"
+                                        animate="visible"
                                     >
                                         {activeDepartment.students.map((student) => (
-                                            <StudentCard
-                                                key={student.id}
-                                                student={student}
-                                                alignment={contentAlignment}
-                                                reaction={getReactionState('student', student)}
-                                                onClick={() => openCardModal('student', activeDepartment.students, student.id)}
-                                            />
+                                            <motion.div key={student.id} variants={fadeUp}>
+                                                <StudentCard
+                                                    student={student}
+                                                    alignment={contentAlignment}
+                                                    reaction={getReactionState('student', student)}
+                                                    onClick={() => openCardModal('student', activeDepartment.students, student.id)}
+                                                />
+                                            </motion.div>
                                         ))}
-                                    </div>
+                                    </motion.div>
                                 </>
                             ) : null}
-                        </div>
+                        </motion.div>
+                        </AnimatePresence>
                     </main>
 
                     <footer

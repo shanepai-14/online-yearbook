@@ -3,7 +3,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 
+import { motion } from 'framer-motion';
+
 import { yearbookPalette as palette } from '@/lib/theme';
+
+const fadeUp = {
+    hidden: { opacity: 0, y: 18 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.48, ease: 'easeOut' } },
+};
+const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.09 } } };
 
 const sansStyle = { fontFamily: "'Helvetica Neue', sans-serif" };
 
@@ -319,19 +327,22 @@ export default function HomePage() {
                     className="pointer-events-none absolute right-0 top-0 h-full w-80"
                     style={{ background: 'rgba(184,56,40,0.07)', clipPath: 'polygon(15% 0,100% 0,100% 100%,0% 100%)' }}
                 />
-                <div
-                    className="mb-3 text-xs uppercase tracking-[0.2em]"
-                    style={{ ...sansStyle, color: palette.goldDark }}
-                >
-                    Online Yearbook Archive
-                </div>
-                <h1 className="mb-2 text-5xl font-normal tracking-wide text-white" style={{ letterSpacing: '2px' }}>
-                    Our <span style={{ color: palette.gold }}>Graduates</span>
-                </h1>
-                <div className="my-4 h-0.5 w-12" style={{ background: palette.red }} />
-                <p className="max-w-lg text-sm leading-relaxed" style={{ ...sansStyle, color: 'rgba(255,255,255,0.55)' }}>
-                    Browse through each graduating batch. Every yearbook preserves the faces, stories, and milestones of the class.
-                </p>
+                <motion.div variants={stagger} initial="hidden" animate="visible">
+                    <motion.div
+                        variants={fadeUp}
+                        className="mb-3 text-xs uppercase tracking-[0.2em]"
+                        style={{ ...sansStyle, color: palette.goldDark }}
+                    >
+                        Online Yearbook Archive
+                    </motion.div>
+                    <motion.h1 variants={fadeUp} className="mb-2 text-5xl font-normal tracking-wide text-white" style={{ letterSpacing: '2px' }}>
+                        Our <span style={{ color: palette.gold }}>Graduates</span>
+                    </motion.h1>
+                    <motion.div variants={fadeUp} className="my-4 h-0.5 w-12" style={{ background: palette.red }} />
+                    <motion.p variants={fadeUp} className="max-w-lg text-sm leading-relaxed" style={{ ...sansStyle, color: 'rgba(255,255,255,0.55)' }}>
+                        Browse through each graduating batch. Every yearbook preserves the faces, stories, and milestones of the class.
+                    </motion.p>
+                </motion.div>
             </section>
 
             <section className="px-6 pb-2 pt-10 sm:px-10">
@@ -378,16 +389,24 @@ export default function HomePage() {
                 ) : null}
 
                 {!loading && !error && sortedYears.length > 0 ? (
-                    <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))' }}>
+                    <motion.div
+                        className="grid gap-6"
+                        style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))' }}
+                        variants={stagger}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true, margin: '-40px' }}
+                    >
                         {sortedYears.map((yearItem, index) => (
-                            <YearCard
-                                key={yearItem.year}
-                                data={yearItem}
-                                isLatest={index === 0}
-                                onClick={() => navigate(`/yearbook/${yearItem.year}`)}
-                            />
+                            <motion.div key={yearItem.year} variants={fadeUp}>
+                                <YearCard
+                                    data={yearItem}
+                                    isLatest={index === 0}
+                                    onClick={() => navigate(`/yearbook/${yearItem.year}`)}
+                                />
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 ) : null}
             </section>
 
