@@ -352,22 +352,13 @@ const handleDownload = async () => {
 
 <div className="absolute inset-0 flex items-center justify-center p-2 md:p-4">
     <div
-        className="relative inline-block overflow-hidden"
-        style={{
-            maxWidth: "100%",
-            maxHeight: "min(100%, 85dvh)",
-        }}
+        className="relative inline-block max-w-full max-h-[48dvh] md:max-h-[88dvh]"
     >
         <img
             src={photoOrPlaceholder(type, item)}
             alt={item.name}
             loading="lazy"
-            className="block max-w-full object-contain"
-            style={{
-                maxHeight: "min(100%, 85dvh)",
-                width: "auto",
-                height: "auto",
-            }}
+            className="block w-auto h-auto max-w-full max-h-[48dvh] md:max-h-[88dvh] object-contain"
             onError={(event) => {
                 event.currentTarget.onerror = null;
                 event.currentTarget.src = fallbackPlaceholder(type, item);
