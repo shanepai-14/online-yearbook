@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Models\User;
 use App\Models\Yearbook;
 use App\Support\DepartmentGroupPhotoMedia;
+use App\Support\ImageOptimizer;
 use App\Support\StudentPhotoMedia;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
@@ -77,7 +78,7 @@ class StudentProfileController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'gender' => ['nullable', Rule::in(['male', 'female'])],
             'photo' => ['nullable', 'string', 'max:2048'],
-            'photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
+            'photo_upload' => ['nullable', 'file', 'image', 'max:25360'],
             'motto' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:120'],
             'class_motto' => ['nullable', 'string', 'max:2000'],
@@ -140,9 +141,9 @@ class StudentProfileController extends Controller
     public function uploadDepartmentGroupPhotos(Request $request): JsonResponse
     {
         $request->validate([
-            'department_group_photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
+            'department_group_photo_upload' => ['nullable', 'file', 'image', 'max:25360'],
             'department_group_photo_uploads' => ['nullable', 'array', 'max:10'],
-            'department_group_photo_uploads.*' => ['file', 'image', 'max:15360'],
+            'department_group_photo_uploads.*' => ['file', 'image', 'max:25360'],
         ]);
 
         $profile = $this->resolveProfile($request->user());
@@ -342,7 +343,7 @@ class StudentProfileController extends Controller
     {
         $this->deleteManagedPhoto($previousPhoto);
 
-        $path = $file->store('student-photos', 'public');
+        $path = ImageOptimizer::storeAsWebP($file, StudentPhotoMedia::DIRECTORY);
 
         return StudentPhotoMedia::publicUrlForStoragePath($path);
     }
@@ -397,7 +398,7 @@ class StudentProfileController extends Controller
 
     private function storeUploadedDepartmentGroupPhoto(UploadedFile $file): string
     {
-        $path = $file->store(DepartmentGroupPhotoMedia::DIRECTORY, 'public');
+        $path = ImageOptimizer::storeAsWebP($file, DepartmentGroupPhotoMedia::DIRECTORY);
 
         return DepartmentGroupPhotoMedia::publicUrlForStoragePath($path);
     }

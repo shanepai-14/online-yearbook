@@ -12,6 +12,7 @@ use App\Models\SchoolSetting;
 use App\Models\Yearbook;
 use App\Support\DepartmentGroupPhotoMedia;
 use App\Support\FacultyPhotoMedia;
+use App\Support\ImageOptimizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -185,9 +186,9 @@ class YearbookController extends Controller
     public function uploadDepartmentGroupPhotos(Request $request, Department $department): JsonResponse
     {
         $request->validate([
-            'department_group_photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
+            'department_group_photo_upload' => ['nullable', 'file', 'image', 'max:25360'],
             'department_group_photo_uploads' => ['nullable', 'array', 'max:10'],
-            'department_group_photo_uploads.*' => ['file', 'image', 'max:15360'],
+            'department_group_photo_uploads.*' => ['file', 'image', 'max:25360'],
         ]);
 
         $uploadedCount = $this->appendDepartmentGroupPhotos($department, $request);
@@ -300,7 +301,7 @@ class YearbookController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'faculty_role_id' => ['required', 'integer', Rule::exists('faculty_roles', 'id')],
-            'photo_upload' => ['required', 'file', 'image', 'max:15360'],
+            'photo_upload' => ['required', 'file', 'image', 'max:25360'],
         ]);
 
         $photo = $this->storeUploadedFacultyPhoto($validated['photo_upload']);
@@ -329,7 +330,7 @@ class YearbookController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'faculty_role_id' => ['required', 'integer', Rule::exists('faculty_roles', 'id')],
-            'photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
+            'photo_upload' => ['nullable', 'file', 'image', 'max:25360'],
         ]);
 
         $photo = $faculty->photo;
@@ -422,7 +423,7 @@ class YearbookController extends Controller
 
     private function storeUploadedFacultyPhoto(UploadedFile $file): string
     {
-        $path = $file->store(FacultyPhotoMedia::DIRECTORY, 'public');
+        $path = ImageOptimizer::storeAsWebP($file, FacultyPhotoMedia::DIRECTORY);
 
         return FacultyPhotoMedia::publicUrlForStoragePath($path);
     }
@@ -486,7 +487,7 @@ class YearbookController extends Controller
 
     private function storeUploadedDepartmentGroupPhoto(UploadedFile $file): string
     {
-        $path = $file->store(DepartmentGroupPhotoMedia::DIRECTORY, 'public');
+        $path = ImageOptimizer::storeAsWebP($file, DepartmentGroupPhotoMedia::DIRECTORY);
 
         return DepartmentGroupPhotoMedia::publicUrlForStoragePath($path);
     }
