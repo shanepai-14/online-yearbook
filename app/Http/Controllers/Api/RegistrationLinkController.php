@@ -8,6 +8,7 @@ use App\Models\RegistrationLink;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\Yearbook;
+use App\Support\ImageOptimizer;
 use App\Support\StudentPhotoMedia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,7 +75,7 @@ class RegistrationLinkController extends Controller
             'motto' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:120'],
             'photo' => ['nullable', 'string', 'max:2048'],
-            'photo_upload' => ['nullable', 'file', 'image', 'max:15360'],
+            'photo_upload' => ['nullable', 'file', 'image', 'max:25360'],
             'yearbook_id' => ['nullable', 'integer', Rule::exists('yearbooks', 'id')],
             'department_id' => ['nullable', 'integer', Rule::exists('departments', 'id')],
         ]);
@@ -294,7 +295,7 @@ class RegistrationLinkController extends Controller
 
     private function storeUploadedPhoto(UploadedFile $file): string
     {
-        $path = $file->store('student-photos', 'public');
+        $path = ImageOptimizer::storeAsWebP($file, StudentPhotoMedia::DIRECTORY);
 
         return StudentPhotoMedia::publicUrlForStoragePath($path);
     }
