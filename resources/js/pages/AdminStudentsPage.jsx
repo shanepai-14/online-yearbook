@@ -1,5 +1,18 @@
 import axios from 'axios';
-import { GraduationCap, Loader2, Mail, SquarePen, UserCheck, UserX, Users, X } from 'lucide-react';
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    Download,
+    GraduationCap,
+    Loader2,
+    Mail,
+    SquarePen,
+    UserCheck,
+    UserX,
+    Users,
+    X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -55,6 +68,10 @@ function firstApiError(error, fallbackMessage) {
     return error?.response?.data?.message || fallbackMessage;
 }
 
+function escapeCsvValue(value) {
+    return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
 export default function AdminStudentsPage() {
     const emptyEditForm = {
         name: '',
@@ -79,6 +96,13 @@ export default function AdminStudentsPage() {
     const [notice, setNotice] = useState('');
     const [busyStudentId, setBusyStudentId] = useState(null);
     const [search, setSearch] = useState('');
+    const [filterYear, setFilterYear] = useState('all');
+    const [filterDepartment, setFilterDepartment] = useState('all');
+    const [filterProfileStatus, setFilterProfileStatus] = useState('all');
+    const [filterAccountStatus, setFilterAccountStatus] = useState('all');
+    const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+    const [pageSize, setPageSize] = useState('10');
+    const [currentPage, setCurrentPage] = useState(1);
     const [editStudentOpen, setEditStudentOpen] = useState(false);
     const [editingStudentId, setEditingStudentId] = useState(null);
     const [editForm, setEditForm] = useState(emptyEditForm);
@@ -123,14 +147,30 @@ export default function AdminStudentsPage() {
         setEditPhotoPreview(String(editForm.photo || '').trim());
     }, [editForm.photo, editForm.photo_upload, editStudentOpen]);
 
+    const yearFilterOptions = useMemo(() => {
+        return Array.from(
+            new Set(
+                students
+                    .map((student) => String(student.graduating_year || '').trim())
+                    .filter((value) => value !== ''),
+            ),
+        ).sort((a, b) => Number(b) - Number(a));
+    }, [students]);
+
+    const departmentFilterOptions = useMemo(() => {
+        return Array.from(
+            new Set(
+                students
+                    .map((student) => String(student.department || '').trim())
+                    .filter((value) => value !== ''),
+            ),
+        ).sort((a, b) => a.localeCompare(b));
+    }, [students]);
+
     const filteredStudents = useMemo(() => {
         const keyword = search.trim().toLowerCase();
 
-        if (!keyword) {
-            return students;
-        }
-
-        return students.filter((student) => {
+        const matchesFilters = students.filter((student) => {
             const haystack = [
                 student.name,
                 student.email,
@@ -142,9 +182,119 @@ export default function AdminStudentsPage() {
                 .map((value) => String(value || '').toLowerCase())
                 .join(' ');
 
-            return haystack.includes(keyword);
+            if (keyword && !haystack.includes(keyword)) {
+                return false;
+            }
+
+            if (filterYear !== 'all' && String(student.graduating_year || '') !== filterYear) {
+                return false;
+            }
+
+            if (filterDepartment !== 'all' && String(student.department || '') !== filterDepartment) {
+                return false;
+            }
+
+            if (filterProfileStatus === 'completed' && !student.is_profile_completed) {
+                return false;
+            }
+
+            if (filterProfileStatus === 'pending' && student.is_profile_completed) {
+                return false;
+            }
+
+            if (filterAccountStatus === 'active' && !student.is_active) {
+                return false;
+            }
+
+            if (filterAccountStatus === 'inactive' && student.is_active) {
+                return false;
+            }
+
+            return true;
         });
-    }, [search, students]);
+
+        const sortValue = (student) => {
+            switch (sortConfig.key) {
+                case 'name':
+                    return String(student.name || '');
+                case 'email':
+                    return String(student.email || '');
+                case 'role':
+                    return String(student.role || '');
+                case 'department':
+                    return String(student.department || '');
+                case 'year':
+                    return Number(student.graduating_year || 0);
+                case 'registration':
+                    return String(student.registration_link_title || '');
+                case 'profile':
+                    return student.is_profile_completed ? 1 : 0;
+                case 'account':
+                    return student.is_active ? 1 : 0;
+                default:
+                    return String(student.name || '');
+            }
+        };
+
+        return [...matchesFilters].sort((left, right) => {
+            const leftValue = sortValue(left);
+            const rightValue = sortValue(right);
+
+            let result = 0;
+
+            if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+                result = leftValue - rightValue;
+            } else {
+                result = String(leftValue).localeCompare(String(rightValue), undefined, {
+                    sensitivity: 'base',
+                    numeric: true,
+                });
+            }
+
+            if (result === 0) {
+                result = Number(left.id || 0) - Number(right.id || 0);
+            }
+
+            return sortConfig.direction === 'asc' ? result : -result;
+        });
+    }, [
+        filterAccountStatus,
+        filterDepartment,
+        filterProfileStatus,
+        filterYear,
+        search,
+        sortConfig.direction,
+        sortConfig.key,
+        students,
+    ]);
+
+    const effectivePageSize = useMemo(() => {
+        if (pageSize === 'all') {
+            return Math.max(filteredStudents.length, 1);
+        }
+
+        return Math.max(Number(pageSize) || 10, 1);
+    }, [filteredStudents.length, pageSize]);
+
+    const totalPages = useMemo(() => {
+        return Math.max(1, Math.ceil(filteredStudents.length / effectivePageSize));
+    }, [effectivePageSize, filteredStudents.length]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, filterYear, filterDepartment, filterProfileStatus, filterAccountStatus, sortConfig.key, sortConfig.direction, pageSize]);
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    const paginatedStudents = useMemo(() => {
+        const startIndex = (currentPage - 1) * effectivePageSize;
+
+        return filteredStudents.slice(startIndex, startIndex + effectivePageSize);
+    }, [currentPage, effectivePageSize, filteredStudents]);
 
     const filteredDepartmentOptions = useMemo(() => {
         if (!editForm.yearbook_id) {
@@ -164,6 +314,89 @@ export default function AdminStudentsPage() {
         }),
         [editForm.badge, editForm.gender, editForm.motto, editForm.name, editPhotoPreview],
     );
+
+    const handleSort = (key) => {
+        setSortConfig((current) => {
+            if (current.key === key) {
+                return {
+                    key,
+                    direction: current.direction === 'asc' ? 'desc' : 'asc',
+                };
+            }
+
+            return {
+                key,
+                direction: 'asc',
+            };
+        });
+    };
+
+    const renderSortIcon = (key) => {
+        if (sortConfig.key !== key) {
+            return <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />;
+        }
+
+        return sortConfig.direction === 'asc' ? (
+            <ArrowUp className="h-3.5 w-3.5 text-slate-700" />
+        ) : (
+            <ArrowDown className="h-3.5 w-3.5 text-slate-700" />
+        );
+    };
+
+    const resetFilters = () => {
+        setFilterYear('all');
+        setFilterDepartment('all');
+        setFilterProfileStatus('all');
+        setFilterAccountStatus('all');
+        setSearch('');
+        setCurrentPage(1);
+    };
+
+    const exportStudentDirectory = () => {
+        if (filteredStudents.length === 0) {
+            return;
+        }
+
+        const header = [
+            'ID',
+            'Name',
+            'Email',
+            'Role',
+            'Department',
+            'Graduating Year',
+            'Registration Link',
+            'Profile Status',
+            'Account Status',
+        ];
+
+        const rows = filteredStudents.map((student) => [
+            student.id,
+            student.name,
+            student.email,
+            student.role,
+            student.department,
+            student.graduating_year,
+            student.registration_link_title,
+            student.is_profile_completed ? 'Completed' : 'Pending',
+            student.is_active ? 'Active' : 'Inactive',
+        ]);
+
+        const csvContent = `\uFEFF${[header, ...rows]
+            .map((row) => row.map((value) => escapeCsvValue(value)).join(','))
+            .join('\n')}`;
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const fileDate = new Date().toISOString().slice(0, 10);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.setAttribute('download', `student-directory-${fileDate}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
 
     const handleToggleStatus = async (student) => {
         if (!student?.id || !student?.user_id || busyStudentId !== null) {
@@ -381,6 +614,86 @@ export default function AdminStudentsPage() {
                         />
                     </div>
                 </div>
+
+                <div className="mt-5 grid gap-3 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto_auto]">
+                    <div className="space-y-1.5">
+                        <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">Year</p>
+                        <select
+                            value={filterYear}
+                            onChange={(event) => setFilterYear(event.target.value)}
+                            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                        >
+                            <option value="all">All Years</option>
+                            {yearFilterOptions.map((year) => (
+                                <option key={year} value={year}>
+                                    {year}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">Department</p>
+                        <select
+                            value={filterDepartment}
+                            onChange={(event) => setFilterDepartment(event.target.value)}
+                            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                        >
+                            <option value="all">All Departments</option>
+                            {departmentFilterOptions.map((department) => (
+                                <option key={department} value={department}>
+                                    {department}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">Profile</p>
+                        <select
+                            value={filterProfileStatus}
+                            onChange={(event) => setFilterProfileStatus(event.target.value)}
+                            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                        >
+                            <option value="all">All</option>
+                            <option value="completed">Completed</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">Account</p>
+                        <select
+                            value={filterAccountStatus}
+                            onChange={(event) => setFilterAccountStatus(event.target.value)}
+                            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                        >
+                            <option value="all">All</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="self-end"
+                        onClick={resetFilters}
+                    >
+                        Reset
+                    </Button>
+
+                    <Button
+                        type="button"
+                        className="self-end"
+                        style={{ background: palette.navy, color: '#fff' }}
+                        onClick={exportStudentDirectory}
+                        disabled={filteredStudents.length === 0}
+                    >
+                        <Download className="mr-2 h-4 w-4" />
+                        Export Excel
+                    </Button>
+                </div>
             </section>
 
             {error ? <p className="text-sm" style={{ color: palette.red }}>{error}</p> : null}
@@ -393,7 +706,9 @@ export default function AdminStudentsPage() {
                         <h2 className="mt-1 text-lg font-semibold text-slate-900">Student Directory</h2>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-500">{filteredStudents.length} shown</span>
+                        <span className="text-xs text-slate-500">
+                            {paginatedStudents.length} of {filteredStudents.length} shown
+                        </span>
                         <div
                             className="flex h-10 w-10 items-center justify-center rounded-xl"
                             style={{ background: `${palette.navy}16`, color: palette.navy }}
@@ -408,7 +723,7 @@ export default function AdminStudentsPage() {
                         <p className="px-5 py-6 text-sm text-slate-500">No students match your search.</p>
                     ) : null}
 
-                    {filteredStudents.map((student) => (
+                    {paginatedStudents.map((student) => (
                         <article key={student.id} className="space-y-3 px-5 py-4">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
@@ -439,24 +754,36 @@ export default function AdminStudentsPage() {
                         <thead>
                             <tr className="border-b border-slate-200">
                                 {[
-                                    'Name',
-                                    'Email',
-                                    'Role',
-                                    'Department',
-                                    'Year',
-                                    'Registration Link',
-                                    'Profile',
-                                    'Account',
-                                    'Action',
-                                ].map((heading) => (
+                                    ['Name', 'name'],
+                                    ['Email', 'email'],
+                                    ['Role', 'role'],
+                                    ['Department', 'department'],
+                                    ['Year', 'year'],
+                                    ['Registration Link', 'registration'],
+                                    ['Profile', 'profile'],
+                                    ['Account', 'account'],
+                                ].map(([heading, sortKey]) => (
                                     <th
                                         key={heading}
                                         className="px-5 py-3 text-left text-xs uppercase tracking-[0.13em] text-slate-500"
                                         style={{ fontFamily: "'Helvetica Neue', sans-serif" }}
                                     >
-                                        {heading}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSort(sortKey)}
+                                            className="inline-flex items-center gap-1.5 transition hover:text-slate-700"
+                                        >
+                                            <span>{heading}</span>
+                                            {renderSortIcon(sortKey)}
+                                        </button>
                                     </th>
                                 ))}
+                                <th
+                                    className="px-5 py-3 text-left text-xs uppercase tracking-[0.13em] text-slate-500"
+                                    style={{ fontFamily: "'Helvetica Neue', sans-serif" }}
+                                >
+                                    Action
+                                </th>
                             </tr>
                         </thead>
 
@@ -469,7 +796,7 @@ export default function AdminStudentsPage() {
                                 </tr>
                             ) : null}
 
-                            {filteredStudents.map((student) => (
+                            {paginatedStudents.map((student) => (
                                 <tr key={student.id} className="border-b border-slate-100 hover:bg-slate-50/70">
                                     <td className="px-5 py-3 font-medium text-slate-900">{student.name}</td>
                                     <td className="px-5 py-3 text-slate-600">
@@ -504,6 +831,53 @@ export default function AdminStudentsPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {filteredStudents.length > 0 ? (
+                    <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-4 sm:px-6">
+                        <p className="text-xs text-slate-500">
+                            Page {currentPage} of {totalPages} · {filteredStudents.length} result
+                            {filteredStudents.length === 1 ? '' : 's'}
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <label htmlFor="students_page_size" className="text-xs text-slate-500">
+                                Rows
+                            </label>
+                            <select
+                                id="students_page_size"
+                                value={pageSize}
+                                onChange={(event) => setPageSize(event.target.value)}
+                                className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+                            >
+                                {[10, 25, 50, 100].map((size) => (
+                                    <option key={size} value={size}>
+                                        {size}
+                                    </option>
+                                ))}
+                                <option value="all">All</option>
+                            </select>
+
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setCurrentPage((current) => Math.max(current - 1, 1))}
+                                disabled={currentPage <= 1}
+                            >
+                                Previous
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setCurrentPage((current) => Math.min(current + 1, totalPages))}
+                                disabled={currentPage >= totalPages}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </footer>
+                ) : null}
             </section>
 
             <Dialog

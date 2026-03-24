@@ -351,34 +351,19 @@ const handleDownload = async () => {
 
 
 <div className="absolute inset-0 flex items-center justify-center p-2 md:p-4">
-    {/* 
-      Grid trick: a 1×1 grid where every child occupies the same cell.
-      The <img> sizes the cell; the overlay layers are clamped to it.
-      overflow-hidden clips anything that would escape the image bounds.
-      max-h is capped to the viewport so tall images never push the
-      bottom off-screen (mirrors Facebook's lightbox behaviour).
-    */}
     <div
-        className="relative grid overflow-hidden"
+        className="relative inline-block overflow-hidden"
         style={{
-            gridTemplateAreas: "'stack'",
-            gridTemplateRows: "1fr",
-            gridTemplateColumns: "1fr",
             maxWidth: "100%",
             maxHeight: "min(100%, 85dvh)",
-            width: "auto",
-            height: "auto",
         }}
     >
-        {/* Image — defines the cell size, capped to the viewport */}
         <img
             src={photoOrPlaceholder(type, item)}
             alt={item.name}
             loading="lazy"
-            className="block object-contain"
+            className="block max-w-full object-contain"
             style={{
-                gridArea: "stack",
-                maxWidth: "100%",
                 maxHeight: "min(100%, 85dvh)",
                 width: "auto",
                 height: "auto",
@@ -389,76 +374,84 @@ const handleDownload = async () => {
             }}
         />
 
-        {/* Gradient overlay — now constrained to the image cell */}
         <div
-            className="pointer-events-none h-[45%] self-end transition-all duration-300 md:group-hover:translate-y-2 md:group-hover:opacity-0"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[45%] transition-all duration-300 md:group-hover:translate-y-2 md:group-hover:opacity-0"
             style={{
-                gridArea: "stack",
                 background: "linear-gradient(to top, #1a2a6ceb, #1a2a6ca8 45%, transparent)",
                 zIndex: 1,
             }}
             aria-hidden="true"
         />
 
-        {/* Text overlay — sits above gradient via zIndex */}
         <div
             className={cn(
-                "pointer-events-none self-end px-4 pb-4",
+                "pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-4",
                 textAlignClass,
             )}
-            style={{ gridArea: "stack", zIndex: 2 }}
+            style={{ zIndex: 2 }}
         >
             <div
-                className="text-white"
-                style={{
-                    letterSpacing: "0.4px",
-                    fontSize: "clamp(0.95rem, 1.45vw, 1.45rem)",
-                }}
+                className={cn(
+                    'w-full',
+                    alignment === 'center' ? 'mx-auto' : alignment === 'right' ? 'ml-auto' : '',
+                )}
+                style={{ maxWidth: '100%' }}
             >
-                {item.name}
-            </div>
-
-            {type === "student" ? (
-                <>
-                    {item.motto ? (
-                        <div
-                            className="mt-1 italic leading-snug"
-                            style={{
-                                fontFamily: "Georgia, serif",
-                                color: "rgba(232,217,138,0.85)",
-                                fontSize: "clamp(0.72rem, 1.05vw, 1rem)",
-                            }}
-                        >
-                            "{item.motto}"
-                        </div>
-                    ) : null}
-                    {item.badge ? (
-                        <span
-                            className="mt-2 inline-block border px-2 py-1 uppercase tracking-[0.14em]"
-                            style={{
-                                fontFamily: "'Helvetica Neue', sans-serif",
-                                color: "rgba(232,217,138,0.9)",
-                                borderColor: "rgba(232,217,138,0.9)",
-                                fontSize: "clamp(0.52rem, 0.72vw, 0.75rem)",
-                            }}
-                        >
-                            {item.badge}
-                        </span>
-                    ) : null}
-                </>
-            ) : (
                 <div
-                    className="mt-1"
+                    className="whitespace-normal break-words leading-tight text-white"
                     style={{
-                        fontFamily: "'Helvetica Neue', sans-serif",
-                        color: "rgba(232,217,138,0.9)",
-                        letterSpacing: "0.08em",
-                        fontSize: "clamp(0.68rem, 0.9vw, 0.9rem)",
+                        letterSpacing: "0.4px",
+                        fontSize: "clamp(0.95rem, 1.45vw, 1.45rem)",
+                        overflowWrap: 'anywhere',
                     }}
                 >
-                    {item.role}
+                    {item.name}
                 </div>
-            )}
+
+                {type === "student" ? (
+                    <>
+                        {item.motto ? (
+                            <div
+                                className="mt-1 whitespace-pre-wrap break-words italic leading-snug"
+                                style={{
+                                    fontFamily: "Georgia, serif",
+                                    color: "rgba(232,217,138,0.85)",
+                                    fontSize: "clamp(0.72rem, 1.05vw, 1rem)",
+                                    overflowWrap: 'anywhere',
+                                }}
+                            >
+                                "{item.motto}"
+                            </div>
+                        ) : null}
+                        {item.badge ? (
+                            <span
+                                className="mt-2 inline-block border px-2 py-1 uppercase tracking-[0.14em]"
+                                style={{
+                                    fontFamily: "'Helvetica Neue', sans-serif",
+                                    color: "rgba(232,217,138,0.9)",
+                                    borderColor: "rgba(232,217,138,0.9)",
+                                    fontSize: "clamp(0.52rem, 0.72vw, 0.75rem)",
+                                }}
+                            >
+                                {item.badge}
+                            </span>
+                        ) : null}
+                    </>
+                ) : (
+                    <div
+                        className="mt-1 whitespace-normal break-words"
+                        style={{
+                            fontFamily: "'Helvetica Neue', sans-serif",
+                            color: "rgba(232,217,138,0.9)",
+                            letterSpacing: "0.08em",
+                            fontSize: "clamp(0.68rem, 0.9vw, 0.9rem)",
+                            overflowWrap: 'anywhere',
+                        }}
+                    >
+                        {item.role}
+                    </div>
+                )}
+            </div>
         </div>
     </div>
 </div>
@@ -469,12 +462,16 @@ const handleDownload = async () => {
                     <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
                         {type === 'student' ? 'Graduate Profile' : 'Faculty Profile'}
                     </p>
-                    <h2 className="text-2xl font-semibold text-slate-900">{item.name}</h2>
+                    <h2 className="break-words text-2xl font-semibold text-slate-900" style={{ overflowWrap: 'anywhere' }}>
+                        {item.name}
+                    </h2>
 
                     {type === 'student' ? (
                         <>
                             {item.motto ? (
-                                <p className="text-sm italic leading-relaxed text-slate-600">"{item.motto}"</p>
+                                <p className="break-words text-sm italic leading-relaxed text-slate-600" style={{ overflowWrap: 'anywhere' }}>
+                                    "{item.motto}"
+                                </p>
                             ) : (
                                 <p className="text-sm text-slate-500">No motto provided.</p>
                             )}
@@ -483,7 +480,9 @@ const handleDownload = async () => {
                             ) : null}
                         </>
                     ) : (
-                        <p className="text-sm text-slate-600">{item.role}</p>
+                        <p className="break-words text-sm text-slate-600" style={{ overflowWrap: 'anywhere' }}>
+                            {item.role}
+                        </p>
                     )}
                 </div>
 
