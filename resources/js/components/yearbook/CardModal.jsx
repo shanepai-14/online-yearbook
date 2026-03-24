@@ -34,6 +34,11 @@ function photoOrPlaceholder(type, item) {
     return resolveFacultyPhoto(item?.photo, item?.id ?? item?.name ?? '');
 }
 
+function formatMotto(motto) {
+    const m = String(motto || '').trim();
+    return m.startsWith('"') && m.endsWith('"') ? m : `"${m}"`;
+}
+
 function clamp(value, min, max) {
     return Math.max(min, Math.min(value, max));
 }
@@ -259,7 +264,7 @@ const handleDownload = async () => {
         if (type === 'student') {
             if (item.motto) {
                 blockHeight += Math.round(subTextSize * 0.2);
-                blockHeight += measureLines(`"${item.motto}"`, subFont, availableTextWidth, 3) * lineHeightSub;
+                blockHeight += measureLines(formatMotto(item.motto), subFont, availableTextWidth, 3) * lineHeightSub;
             }
             if (item.badge) {
                 blockHeight += badgeGap + badgeHeight;
@@ -298,7 +303,7 @@ const handleDownload = async () => {
                 cursorY += Math.round(subTextSize * 0.2);
                 cursorY = drawWrappedText(
                     context,
-                    `"${item.motto}"`,
+                    formatMotto(item.motto),
                     textX,
                     cursorY,
                     availableTextWidth,
@@ -411,7 +416,7 @@ const handleDownload = async () => {
                                     overflowWrap: 'anywhere',
                                 }}
                             >
-                                "{item.motto}"
+                                {formatMotto(item.motto)}
                             </div>
                         ) : null}
                         {item.badge ? (
@@ -461,7 +466,7 @@ const handleDownload = async () => {
                         <>
                             {item.motto ? (
                                 <p className="break-words text-sm italic leading-relaxed text-slate-600" style={{ overflowWrap: 'anywhere' }}>
-                                    "{item.motto}"
+                                    {formatMotto(item.motto)}
                                 </p>
                             ) : (
                                 <p className="text-sm text-slate-500">No motto provided.</p>
