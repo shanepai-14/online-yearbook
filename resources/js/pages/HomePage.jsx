@@ -64,7 +64,7 @@ function YearCard({ data, isLatest, onClick }) {
             onClick={onClick}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
-            className="cursor-pointer overflow-hidden text-left transition-all duration-300"
+            className="flex h-full flex-col cursor-pointer overflow-hidden text-left transition-all duration-300"
             style={{
                 background: '#fff',
                 border: isLatest ? `2px solid ${palette.goldDark}` : `1px solid ${palette.cardBorder}`,
@@ -110,7 +110,7 @@ function YearCard({ data, isLatest, onClick }) {
                 </div>
             ) : null}
 
-            <div className="border-t px-5 py-4" style={{ borderColor: '#f0f1f5' }}>
+            <div className="flex-1 border-t px-5 py-4" style={{ borderColor: '#f0f1f5' }}>
                 <div
                     className="mb-1.5 text-xs uppercase tracking-[0.15em]"
                     style={{ ...sansStyle, color: palette.red, fontSize: '9px' }}
