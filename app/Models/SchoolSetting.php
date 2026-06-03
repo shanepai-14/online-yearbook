@@ -16,6 +16,11 @@ class SchoolSetting extends Model
     protected $fillable = [
         'school_name',
         'graduates_content_alignment',
+        'external_system_enabled',
+    ];
+
+    protected $casts = [
+        'external_system_enabled' => 'boolean',
     ];
 
     public static function allowedAlignments(): array

@@ -10,20 +10,27 @@ use Illuminate\Validation\Rule;
 
 class SchoolSettingController extends Controller
 {
-    public function show(): JsonResponse
+    private function resolveOrCreate(): SchoolSetting
     {
-        $setting = SchoolSetting::query()->firstOrCreate(
+        return SchoolSetting::query()->firstOrCreate(
             ['id' => 1],
             [
                 'school_name' => config('app.name', 'School'),
                 'graduates_content_alignment' => SchoolSetting::ALIGN_LEFT,
+                'external_system_enabled' => true,
             ],
         );
+    }
+
+    public function show(): JsonResponse
+    {
+        $setting = $this->resolveOrCreate();
 
         return response()->json([
             'school_setting' => [
                 'school_name' => $setting->school_name,
                 'graduates_content_alignment' => $setting->graduates_content_alignment ?? SchoolSetting::ALIGN_LEFT,
+                'external_system_enabled' => (bool) ($setting->external_system_enabled ?? true),
             ],
         ]);
     }
@@ -48,7 +55,19 @@ class SchoolSettingController extends Controller
             'school_setting' => [
                 'school_name' => $setting->school_name,
                 'graduates_content_alignment' => $setting->graduates_content_alignment,
+                'external_system_enabled' => (bool) ($setting->external_system_enabled ?? true),
             ],
+        ]);
+    }
+
+    public function toggleExternalSystem(): JsonResponse
+    {
+        $setting = $this->resolveOrCreate();
+        $setting->external_system_enabled = ! $setting->external_system_enabled;
+        $setting->save();
+
+        return response()->json([
+            'external_system_enabled' => $setting->external_system_enabled,
         ]);
     }
 }

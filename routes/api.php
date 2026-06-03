@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\RegistrationLinkController as PublicRegistrationLin
 use App\Http\Controllers\Api\ReactionController;
 use App\Http\Controllers\Api\SchoolSettingController;
 use App\Http\Controllers\Api\StudentProfileController;
+use App\Http\Controllers\Api\SystemStatusController;
 use App\Http\Controllers\Api\YearbookController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,8 @@ Route::get('/ping', function () {
         'time' => now()->toIso8601String(),
     ]);
 });
+
+Route::get('/system-status', [SystemStatusController::class, 'show']);
 
 Route::middleware('web')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
@@ -86,6 +89,7 @@ Route::middleware('web')->group(function () {
                 ->whereNumber('departmentGroupPhoto');
             Route::get('/school-setting', [AdminSchoolSettingController::class, 'show']);
             Route::put('/school-setting', [AdminSchoolSettingController::class, 'update']);
+            Route::patch('/school-setting/system-status', [AdminSchoolSettingController::class, 'toggleExternalSystem']);
             Route::get('/registration-links', [AdminRegistrationLinkController::class, 'index']);
             Route::post('/registration-links', [AdminRegistrationLinkController::class, 'store']);
             Route::get('/registration-links/{registrationLink}', [AdminRegistrationLinkController::class, 'show'])->whereNumber('registrationLink');
