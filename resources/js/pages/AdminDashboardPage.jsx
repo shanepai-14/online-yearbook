@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BookOpenText, Building2, CheckCircle2, Clock3, LayoutGrid, Link2, Users } from 'lucide-react';
+import { BookOpenText, Building2, CheckCircle2, Clock3, LayoutGrid, Link2, Power, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -40,6 +40,8 @@ export default function AdminDashboardPage() {
     const [yearbooks, setYearbooks] = useState([]);
     const [schoolName, setSchoolName] = useState('');
     const [contentAlignment, setContentAlignment] = useState('left');
+    const [externalSystemEnabled, setExternalSystemEnabled] = useState(true);
+    const [togglingSystem, setTogglingSystem] = useState(false);
     const [savingSettings, setSavingSettings] = useState(false);
     const [settingsMessage, setSettingsMessage] = useState('');
     const [loading, setLoading] = useState(true);
@@ -58,6 +60,7 @@ export default function AdminDashboardPage() {
                 setYearbooks(yearbooksResponse.data.yearbooks ?? []);
                 setSchoolName(schoolSettingResponse.data.school_setting?.school_name ?? 'School');
                 setContentAlignment(schoolSettingResponse.data.school_setting?.graduates_content_alignment ?? 'left');
+                setExternalSystemEnabled(schoolSettingResponse.data.school_setting?.external_system_enabled ?? true);
             } catch (requestError) {
                 setError(requestError.response?.data?.message || 'Unable to load admin dashboard data.');
             } finally {
@@ -81,6 +84,18 @@ export default function AdminDashboardPage() {
             totalDepartments,
         };
     }, [students, yearbooks]);
+
+    const handleToggleExternalSystem = async () => {
+        setTogglingSystem(true);
+        try {
+            const response = await axios.patch('/api/admin/school-setting/system-status');
+            setExternalSystemEnabled(response.data.external_system_enabled);
+        } catch {
+            // silently ignore — state stays as-is
+        } finally {
+            setTogglingSystem(false);
+        }
+    };
 
     const handleSaveSettings = async () => {
         setSavingSettings(true);
@@ -268,6 +283,74 @@ export default function AdminDashboardPage() {
                             {settingsMessage}
                         </span>
                     ) : null}
+                </div>
+            </section>
+
+            <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                        <div
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                            style={{
+                                background: externalSystemEnabled ? `${palette.navy}18` : `${palette.red}18`,
+                                color: externalSystemEnabled ? palette.navy : palette.red,
+                            }}
+                        >
+                            <Power className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p
+                                className="text-xs uppercase tracking-[0.15em] text-slate-500"
+                                style={{ fontFamily: "'Helvetica Neue', sans-serif" }}
+                            >
+                                External System Control
+                            </p>
+                            <h2 className="mt-1 text-xl font-bold text-slate-900">
+                                System Kill Switch
+                            </h2>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Other systems poll{' '}
+                                <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs text-slate-700">
+                                    GET /api/system-status
+                                </code>{' '}
+                                to check this flag. Toggle to enable or disable their backend remotely.
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleToggleExternalSystem}
+                        disabled={togglingSystem}
+                        aria-pressed={externalSystemEnabled}
+                        className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60"
+                        style={{
+                            background: externalSystemEnabled ? palette.navy : '#94a3b8',
+                            focusVisibleRingColor: palette.navy,
+                        }}
+                    >
+                        <span
+                            className="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200"
+                            style={{ transform: externalSystemEnabled ? 'translateX(20px)' : 'translateX(2px)' }}
+                        />
+                    </button>
+                </div>
+
+                <div className="mt-4 flex items-center gap-2">
+                    <span
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
+                        style={
+                            externalSystemEnabled
+                                ? { background: `${palette.navy}18`, color: palette.navy }
+                                : { background: `${palette.red}18`, color: palette.red }
+                        }
+                    >
+                        <span
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ background: externalSystemEnabled ? palette.navy : palette.red }}
+                        />
+                        {externalSystemEnabled ? 'Enabled — external system is active' : 'Disabled — external system is off'}
+                    </span>
                 </div>
             </section>
 
